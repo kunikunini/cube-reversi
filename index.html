@@ -728,11 +728,9 @@
   function resetBoards() {
     state.boards = {};
     for (const f of FACES) state.boards[f] = makeEmptyBoard();
-    for (const f of FACES) {
-      const b = state.boards[f];
-      b[0][0] = P1; b[0][1] = P2;
-      b[1][0] = P2; b[1][1] = P1;
-    }
+    const b = state.boards["front"];
+    b[0][0] = P1; b[0][1] = P2;
+    b[1][0] = P2; b[1][1] = P1;
   }
 
   function buildCube() {
