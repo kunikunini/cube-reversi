@@ -509,6 +509,26 @@
   }
   .big-btn:active { transform: scale(0.98); }
 
+  .diff-btn {
+    background: rgba(120, 180, 255, 0.04);
+    border: 1px solid var(--edge);
+    color: var(--muted);
+    padding: 10px 0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+  }
+  .diff-btn.active {
+    background: linear-gradient(180deg, rgba(40, 243, 255, 0.18), rgba(40, 243, 255, 0.04));
+    border-color: rgba(40, 243, 255, 0.6);
+    color: #d9fbff;
+    text-shadow: 0 0 8px rgba(40, 243, 255, 0.6);
+  }
+  .diff-btn:active { transform: scale(0.97); }
+
   /* tiny toast */
   .toast {
     position: fixed;
@@ -654,6 +674,11 @@
         <div>制限時間は各3分。切れたら負けです。</div>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+      <button class="diff-btn" data-diff="easy">EASY</button>
+      <button class="diff-btn active" data-diff="normal">NORMAL</button>
+      <button class="diff-btn" data-diff="hard">HARD</button>
+    </div>
     <button class="big-btn" id="startBtn">START GAME</button>
   </div>
 </div>
@@ -709,6 +734,7 @@
     gameOver: false,
     aiThinking: false,
     muted: false,
+    difficulty: 'normal', // 'easy' | 'normal' | 'hard'
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1135,16 +1161,69 @@
     [ 8, 2, 8],
   ];
 
-  function aiMove() {
-    if (state.gameOver) return;
-    let best = null;
+  function allLegalMoves(player) {
+    const moves = [];
     for (const f of FACES) {
-      for (const m of legalMovesOnFace(f, P2)) {
-        const score = m.flips.length * 3 + WEIGHT[m.r][m.c]
-                    + Math.random() * 0.9;
-        if (!best || score > best.score) best = { face: f, ...m, score };
+      for (const m of legalMovesOnFace(f, player)) {
+        moves.push({ face: f, ...m });
       }
     }
+    return moves;
+  }
+
+  function scoreMove(face, r, c, player) {
+    return flipsFor(face, r, c, player).length * 3 + WEIGHT[r][c];
+  }
+
+  function aiPickMove() {
+    const moves = allLegalMoves(P2);
+    if (!moves.length) return null;
+
+    if (state.difficulty === 'easy') {
+      // Random
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    if (state.difficulty === 'normal') {
+      // Flip count + position weight + small random
+      let best = null;
+      for (const m of moves) {
+        const score = m.flips.length * 3 + WEIGHT[m.r][m.c] + Math.random() * 0.9;
+        if (!best || score > best.score) best = { ...m, score };
+      }
+      return best;
+    }
+
+    // HARD: score = my gain - opponent's best response
+    let best = null;
+    for (const m of moves) {
+      const myScore = m.flips.length * 3 + WEIGHT[m.r][m.c];
+
+      // Simulate move
+      const saved = FACES.map(f => state.boards[f].map(row => [...row]));
+      applyMove(m.face, m.r, m.c, P2);
+
+      // Opponent's best response
+      let oppBest = 0;
+      for (const f of FACES) {
+        for (const om of legalMovesOnFace(f, P1)) {
+          const s = om.flips.length * 3 + WEIGHT[om.r][om.c];
+          if (s > oppBest) oppBest = s;
+        }
+      }
+
+      // Restore board
+      FACES.forEach((f, i) => { state.boards[f] = saved[i]; });
+
+      const score = myScore - oppBest * 0.8;
+      if (!best || score > best.score) best = { ...m, score };
+    }
+    return best;
+  }
+
+  function aiMove() {
+    if (state.gameOver) return;
+    const best = aiPickMove();
     if (!best) {
       state.aiThinking = false;
       setTurn(P1);
@@ -1278,6 +1357,14 @@
     $("muteBtn").textContent = state.muted ? "♪̸" : "♪";
     $("muteBtn").style.opacity = state.muted ? "0.5" : "1";
   });
+  document.querySelectorAll(".diff-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.difficulty = btn.dataset.diff;
+      document.querySelectorAll(".diff-btn").forEach(b =>
+        b.classList.toggle("active", b === btn));
+    });
+  });
+
   $("startBtn").addEventListener("click", () => {
     $("tut").classList.add("hidden");
     resetGame();
