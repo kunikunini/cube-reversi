@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>CUBE リバーシ</title>
+<title>NEO REVERSI</title>
 <style>
   :root {
     --bg-0: #05060c;
@@ -563,7 +563,7 @@
     <span>CUBE</span>
     <span class="brand-dot m"></span>
   </div>
-  <div class="title"><span class="accent">CUBE</span> リバーシ</div>
+  <div class="title"><span class="accent">NEO</span> <span class="accent2">REVERSI</span></div>
   <div class="menu">
     <button class="icon-btn" id="helpBtn" aria-label="ヘルプ">?</button>
     <button class="icon-btn" id="muteBtn" aria-label="サウンド">♪</button>
@@ -648,6 +648,7 @@
     <div id="finalTotal" style="font-size:10px;letter-spacing:0.15em;color:var(--muted);margin-bottom:12px;"></div>
     <button class="big-btn" id="playAgainBtn">PLAY AGAIN</button>
     <button class="action-btn" id="reviewBtn" style="width:100%;margin-top:8px;">盤面を確認する</button>
+    <button class="action-btn" id="toTitleBtn" style="width:100%;margin-top:8px;">タイトル画面に戻る</button>
   </div>
 </div>
 
@@ -655,7 +656,7 @@
 <div class="tut" id="tut">
   <div class="tut-inner">
     <div class="tut-logo">◆ NEO-REVERSI</div>
-    <h1 class="tut-title"><span class="c">CUBE</span> <span class="m">リバーシ</span></h1>
+    <h1 class="tut-title"><span class="c">NEO</span> <span class="m">REVERSI</span></h1>
     <div class="tut-sub">3×3×3 の立方体、6面すべてが盤面。<br/>スワイプでキューブを回して、好きな面に石を置こう。</div>
     <div class="tut-rows">
       <div class="tut-row">
@@ -669,10 +670,6 @@
       <div class="tut-row">
         <div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M12 10v4"/><path d="M10 12h4"/></svg></div>
         <div>各面で通常のリバーシ。合計54マス、多い方の勝ち。</div>
-      </div>
-      <div class="tut-row">
-        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-        <div>制限時間は各3分。切れたら負けです。</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
@@ -688,7 +685,7 @@
 
 <script>
 /* =============================================================
-   CUBE リバーシ — logic
+   NEO REVERSI — logic
    6 faces × 3×3 = 54 cells. Each face is an independent Reversi
    board. Players alternate; whoever puts a legal move on ANY
    face first places that stone. Elapsed-time display per player.
@@ -1365,6 +1362,10 @@
   });
   $("reviewBtn").addEventListener("click", () => {
     overlayEl.classList.remove("open");
+  });
+  $("toTitleBtn").addEventListener("click", () => {
+    overlayEl.classList.remove("open");
+    $("tut").classList.remove("hidden");
   });
   $("helpBtn").addEventListener("click", () => {
     $("tut").classList.remove("hidden");
