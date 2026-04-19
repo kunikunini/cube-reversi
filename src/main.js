@@ -772,27 +772,29 @@ import "./style.css";
   }
 
   let audioCtx = null;
-  const titleBgm = $("titleBgm");
-  const gameBgm = $("gameBgm");
-  titleBgm.volume = 0.15;
-  gameBgm.volume = 0.15;
+  const bgm = new Audio();
+  bgm.loop = true;
+  bgm.volume = 0.05; // 0.05 is significantly quieter
   let bgmStarted = false;
 
-  function stopAllBgm() {
-    titleBgm.pause();
-    titleBgm.currentTime = 0;
-    gameBgm.pause();
-    gameBgm.currentTime = 0;
-  }
-
   function playTitleBgm() {
-    stopAllBgm();
-    if (!state.muted) titleBgm.play().catch(() => {});
+    if (bgm.src.includes("title_bgm.mp3") && !bgm.paused) return;
+    bgm.pause();
+    bgm.src = "/title_bgm.mp3";
+    bgm.load();
+    if (!state.muted) bgm.play().catch(() => {});
   }
 
   function playGameBgm() {
-    stopAllBgm();
-    if (!state.muted) gameBgm.play().catch(() => {});
+    if (bgm.src.includes("game_bgm.mp3") && !bgm.paused) return;
+    bgm.pause();
+    bgm.src = "/game_bgm.mp3";
+    bgm.load();
+    if (!state.muted) bgm.play().catch(() => {});
+  }
+
+  function stopAllBgm() {
+    bgm.pause();
   }
 
   function onFirstInteraction() {
