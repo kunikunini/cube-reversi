@@ -1,0 +1,29 @@
+{
+  "name": "NEO REVERSI",
+  "short_name": "NEO REVERSI",
+  "description": "3D Cube Reversi Game",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05060c",
+  "theme_color": "#0b0f1e",
+  "icons": [
+    {
+      "src": "/cube_reversi_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/cube_reversi_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/cube_reversi_icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
