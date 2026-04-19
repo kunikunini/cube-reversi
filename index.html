@@ -576,7 +576,7 @@
     <div class="who"><span class="dot"></span>YOU</div>
     <div class="row2">
       <div class="score-val" id="p1Score">2</div>
-      <div class="timer" id="p1Timer">03:00</div>
+      <div class="timer" id="p1Timer">00:00</div>
     </div>
   </div>
   <div class="vs">VS</div>
@@ -584,7 +584,7 @@
     <div class="who"><span class="dot"></span>AI</div>
     <div class="row2">
       <div class="score-val" id="p2Score">2</div>
-      <div class="timer" id="p2Timer">03:00</div>
+      <div class="timer" id="p2Timer">00:00</div>
     </div>
   </div>
 </section>
@@ -691,7 +691,7 @@
    CUBE リバーシ — logic
    6 faces × 3×3 = 54 cells. Each face is an independent Reversi
    board. Players alternate; whoever puts a legal move on ANY
-   face first places that stone. Chess-clock style timer.
+   face first places that stone. Elapsed-time display per player.
    ============================================================= */
 
 (() => {
@@ -702,7 +702,6 @@
     left: "LEFT·04", top: "TOP·05", bottom: "BOT·06",
   };
   const EMPTY = 0, P1 = 1, P2 = 2;
-  const TIME_PER_PLAYER = 3 * 60; // seconds
 
   const FACE_TRANSFORMS = {
     front:  "rotateY(  0deg) translateZ(var(--half))",
@@ -722,7 +721,7 @@
   const state = {
     boards: {},
     turn: P1,
-    times: { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER },
+    elapsed: { 1: 0, 2: 0 }, // seconds each player has spent
     timerId: null,
     lastTick: 0,
     rotX: -22,
@@ -1255,13 +1254,7 @@
       const now = performance.now();
       const dt = (now - state.lastTick) / 1000;
       state.lastTick = now;
-      state.times[state.turn] -= dt;
-      if (state.times[state.turn] <= 0) {
-        state.times[state.turn] = 0;
-        updateTimers();
-        endGame(opposite(state.turn), "TIME OUT");
-        return;
-      }
+      state.elapsed[state.turn] += dt;
       updateTimers();
     }, 100);
   }
@@ -1275,10 +1268,10 @@
     return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   }
   function updateTimers() {
-    p1TimerEl.textContent = fmt(state.times[P1]);
-    p2TimerEl.textContent = fmt(state.times[P2]);
-    p1TimerEl.classList.toggle("low", state.times[P1] < 30);
-    p2TimerEl.classList.toggle("low", state.times[P2] < 30);
+    p1TimerEl.textContent = fmt(state.elapsed[P1]);
+    p2TimerEl.textContent = fmt(state.elapsed[P2]);
+    p1TimerEl.classList.remove("low");
+    p2TimerEl.classList.remove("low");
   }
 
   function endGame(winner = null, reason = "") {
@@ -1407,7 +1400,7 @@
     state.aiThinking = false;
     state.history = [];
     $("undoBtn").disabled = true;
-    state.times = { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER };
+    state.elapsed = { 1: 0, 2: 0 };
     state.turn = P1;
     resetBoards();
     applyRotation(true);
