@@ -360,7 +360,7 @@
 
   .action-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 8px;
   }
   .action-btn {
@@ -630,6 +630,7 @@
   </div>
   <div class="action-row">
     <button class="action-btn danger" id="resetBtn">RESET</button>
+    <button class="action-btn" id="undoBtn" disabled>UNDO</button>
     <button class="action-btn" id="passBtn">PASS</button>
     <button class="action-btn primary" id="nextBtn">NEXT</button>
   </div>
@@ -733,8 +734,10 @@
     dragging: false,
     gameOver: false,
     aiThinking: false,
+    aiTimer: null,
     muted: false,
     difficulty: 'normal', // 'easy' | 'normal' | 'hard'
+    history: [], // snapshots for undo
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1129,7 +1132,7 @@
 
     if (p === P2) {
       state.aiThinking = true;
-      setTimeout(aiMove, 650 + Math.random() * 400);
+      state.aiTimer = setTimeout(aiMove, 650 + Math.random() * 400);
     }
   }
 
@@ -1145,11 +1148,14 @@
       snapToFace(face);
       return;
     }
+    const snapshot = snapshotBoards();
     const flips = applyMove(face, r, c, P1);
     if (!flips) {
       showToast("置けません");
       return;
     }
+    state.history.push(snapshot);
+    $("undoBtn").disabled = false;
     playSound("place");
     render();
     updateScores();
@@ -1231,7 +1237,8 @@
       return;
     }
     snapToFace(best.face);
-    setTimeout(() => {
+    state.aiTimer = setTimeout(() => {
+      state.aiTimer = null;
       applyMove(best.face, best.r, best.c, P2);
       playSound("place");
       render();
@@ -1328,6 +1335,22 @@
   $("resetBtn").addEventListener("click", () => {
     if (confirm("ゲームをリセットしますか？")) resetGame();
   });
+  $("undoBtn").addEventListener("click", () => {
+    if (!state.history.length) return;
+    // cancel pending AI move
+    if (state.aiTimer) { clearTimeout(state.aiTimer); state.aiTimer = null; }
+    state.aiThinking = false;
+    // restore boards to before P1's last move
+    state.boards = state.history.pop();
+    $("undoBtn").disabled = state.history.length === 0;
+    state.gameOver = false;
+    state.turn = P1;
+    p1PanelEl.classList.add("active");
+    p2PanelEl.classList.remove("active");
+    overlayEl.classList.remove("open");
+    render();
+    statusEl.innerHTML = `<b>YOUR TURN</b> — 光るマスをタップ`;
+  });
   $("passBtn").addEventListener("click", () => {
     if (state.gameOver || state.turn !== P1) return;
     if (anyLegalMoves(P1)) {
@@ -1371,9 +1394,19 @@
     resetGame();
   });
 
+  function snapshotBoards() {
+    return FACES.reduce((acc, f) => {
+      acc[f] = state.boards[f].map(row => [...row]);
+      return acc;
+    }, {});
+  }
+
   function resetGame() {
+    if (state.aiTimer) { clearTimeout(state.aiTimer); state.aiTimer = null; }
     state.gameOver = false;
     state.aiThinking = false;
+    state.history = [];
+    $("undoBtn").disabled = true;
     state.times = { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER };
     state.turn = P1;
     resetBoards();
