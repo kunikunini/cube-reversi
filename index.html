@@ -991,21 +991,19 @@
 
   // Returns next cell in direction (dr,dc), crossing face edges if needed.
   // Diagonal directions (dr≠0 && dc≠0) cannot cross edges.
-  // crossings tracks how many face boundaries have been crossed (max 1).
-  function nextCell(face, r, c, dr, dc, crossings) {
+  function nextCell(face, r, c, dr, dc) {
     const nr = r + dr, nc = c + dc;
     if (nr >= 0 && nr <= 2 && nc >= 0 && nc <= 2) {
-      return { face, r: nr, c: nc, dr, dc, crossings };
+      return { face, r: nr, c: nc, dr, dc };
     }
     if (dr !== 0 && dc !== 0) return null; // diagonal can't cross edges
-    if (crossings >= 2) return null;       // max 2 edge crossings = 3 faces per line
     const next = crossEdge(face, r, c, dr, dc);
     if (!next) return null;
-    return { ...next, crossings: crossings + 1 };
+    return next;
   }
 
   // Returns list of {face,r,c} stones flipped if player places at (face,r,c).
-  // Cross-face flipping is limited to 1 edge crossing per line direction.
+  // Visited-cell tracking prevents wrap-around loops naturally.
   function flipsFor(face, r, c, player) {
     if (state.boards[face][r][c] !== EMPTY) return [];
     const opp = opposite(player);
@@ -1013,13 +1011,16 @@
 
     for (const [dr, dc] of DIRS) {
       const line = [];
-      let cur = nextCell(face, r, c, dr, dc, 0);
-      let safety = 15;
-      while (cur && safety-- > 0) {
+      let cur = nextCell(face, r, c, dr, dc);
+      const visited = new Set([`${face}:${r}:${c}`]);
+      while (cur) {
+        const key = `${cur.face}:${cur.r}:${cur.c}`;
+        if (visited.has(key)) break; // prevent wrap-around loops
+        visited.add(key);
         const v = state.boards[cur.face][cur.r][cur.c];
         if (v === opp) {
           line.push({ face: cur.face, r: cur.r, c: cur.c });
-          cur = nextCell(cur.face, cur.r, cur.c, cur.dr, cur.dc, cur.crossings);
+          cur = nextCell(cur.face, cur.r, cur.c, cur.dr, cur.dc);
         } else if (v === player) {
           allFlips.push(...line);
           break;
