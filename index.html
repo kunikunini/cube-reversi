@@ -965,17 +965,21 @@
 
   // Returns next cell in direction (dr,dc), crossing face edges if needed.
   // Diagonal directions (dr≠0 && dc≠0) cannot cross edges.
-  function nextCell(face, r, c, dr, dc) {
+  // crossings tracks how many face boundaries have been crossed (max 1).
+  function nextCell(face, r, c, dr, dc, crossings) {
     const nr = r + dr, nc = c + dc;
     if (nr >= 0 && nr <= 2 && nc >= 0 && nc <= 2) {
-      return { face, r: nr, c: nc, dr, dc };
+      return { face, r: nr, c: nc, dr, dc, crossings };
     }
     if (dr !== 0 && dc !== 0) return null; // diagonal can't cross edges
-    return crossEdge(face, r, c, dr, dc);
+    if (crossings >= 1) return null;       // max 1 edge crossing per line
+    const next = crossEdge(face, r, c, dr, dc);
+    if (!next) return null;
+    return { ...next, crossings: crossings + 1 };
   }
 
   // Returns list of {face,r,c} stones flipped if player places at (face,r,c).
-  // Supports cross-face flipping along straight lines.
+  // Cross-face flipping is limited to 1 edge crossing per line direction.
   function flipsFor(face, r, c, player) {
     if (state.boards[face][r][c] !== EMPTY) return [];
     const opp = opposite(player);
@@ -983,13 +987,13 @@
 
     for (const [dr, dc] of DIRS) {
       const line = [];
-      let cur = nextCell(face, r, c, dr, dc);
-      let safety = 30;
+      let cur = nextCell(face, r, c, dr, dc, 0);
+      let safety = 15;
       while (cur && safety-- > 0) {
         const v = state.boards[cur.face][cur.r][cur.c];
         if (v === opp) {
           line.push({ face: cur.face, r: cur.r, c: cur.c });
-          cur = nextCell(cur.face, cur.r, cur.c, cur.dr, cur.dc);
+          cur = nextCell(cur.face, cur.r, cur.c, cur.dr, cur.dc, cur.crossings);
         } else if (v === player) {
           allFlips.push(...line);
           break;
