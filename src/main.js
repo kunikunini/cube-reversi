@@ -543,6 +543,10 @@ import "./style.css";
         }
     p1ScoreEl.textContent = s1;
     p2ScoreEl.textContent = s2;
+
+    p1PanelEl.classList.toggle("leader", s1 > s2);
+    p2PanelEl.classList.toggle("leader", s2 > s1);
+
     return { s1, s2 };
   }
 
@@ -724,30 +728,50 @@ import "./style.css";
     toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1500);
   }
 
+  function customConfirm(msg) {
+    return new Promise((resolve) => {
+      $("confirmMessage").textContent = msg;
+      $("confirmOverlay").classList.add("open");
+      const ok = () => {
+        cleanup();
+        resolve(true);
+      };
+      const cancel = () => {
+        cleanup();
+        resolve(false);
+      };
+      const cleanup = () => {
+        $("confirmOk").removeEventListener("click", ok);
+        $("confirmCancel").removeEventListener("click", cancel);
+        $("confirmOverlay").classList.remove("open");
+      };
+      $("confirmOk").addEventListener("click", ok, { once: true });
+      $("confirmCancel").addEventListener("click", cancel, { once: true });
+    });
+  }
+
   let audioCtx = null;
   const titleBgm = $("titleBgm");
   const gameBgm = $("gameBgm");
-  titleBgm.volume = 0.4;
-  gameBgm.volume = 0.4;
+  titleBgm.volume = 0.15;
+  gameBgm.volume = 0.15;
   let bgmStarted = false;
 
-  function applyMuteToBgm() {
-    titleBgm.muted = state.muted;
-    gameBgm.muted = state.muted;
+  function stopAllBgm() {
+    titleBgm.pause();
+    titleBgm.currentTime = 0;
+    gameBgm.pause();
+    gameBgm.currentTime = 0;
   }
 
   function playTitleBgm() {
-    gameBgm.pause();
-    gameBgm.currentTime = 0;
+    stopAllBgm();
     if (!state.muted) titleBgm.play().catch(() => {});
-    else titleBgm.load();
   }
 
   function playGameBgm() {
-    titleBgm.pause();
-    titleBgm.currentTime = 0;
+    stopAllBgm();
     if (!state.muted) gameBgm.play().catch(() => {});
-    else gameBgm.load();
   }
 
   function onFirstInteraction() {
@@ -786,8 +810,8 @@ import "./style.css";
     } catch (e) {}
   }
 
-  $("resetBtn").addEventListener("click", () => {
-    if (confirm("ゲームをリセットしますか？")) resetGame();
+  $("resetBtn").addEventListener("click", async () => {
+    if (await customConfirm("ゲームをリセットしますか？")) resetGame();
   });
   $("undoBtn").addEventListener("click", () => {
     if (!state.history.length) return;
@@ -834,8 +858,8 @@ import "./style.css";
     $("tut").classList.remove("hidden");
     playTitleBgm();
   });
-  $("homeBtn").addEventListener("click", () => {
-    if (confirm("タイトル画面に戻りますか？")) {
+  $("homeBtn").addEventListener("click", async () => {
+    if (await customConfirm("タイトル画面に戻りますか？")) {
       if (state.aiTimer) {
         clearTimeout(state.aiTimer);
         state.aiTimer = null;
@@ -850,10 +874,11 @@ import "./style.css";
     state.muted = !state.muted;
     $("muteBtn").textContent = state.muted ? "♪̸" : "♪";
     $("muteBtn").style.opacity = state.muted ? "0.5" : "1";
-    applyMuteToBgm();
-    if (!state.muted) {
-      if ($("tut").classList.contains("hidden")) gameBgm.play().catch(() => {});
-      else titleBgm.play().catch(() => {});
+    if (state.muted) {
+      stopAllBgm();
+    } else {
+      if ($("tut").classList.contains("hidden")) playGameBgm();
+      else playTitleBgm();
     }
   });
   document.querySelectorAll(".diff-btn").forEach((btn) => {

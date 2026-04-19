@@ -36,6 +36,12 @@ body {
   width: 100vw;
   overscroll-behavior: none;
   touch-action: none;
+  animation: neon-shift 20s linear infinite;
+}
+
+@keyframes neon-shift {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(15deg); }
 }
 
 body {
@@ -151,6 +157,32 @@ body {
 .player.active.p2 {
   border-color: rgba(255, 62, 165, 0.7);
   box-shadow: 0 0 0 1px rgba(255, 62, 165, 0.3), 0 0 24px rgba(255, 62, 165, 0.25);
+}
+
+.player.leader {
+  border-color: var(--amber) !important;
+  box-shadow: 0 0 0 1px rgba(255, 203, 71, 0.4), 0 0 20px rgba(255, 203, 71, 0.3) !important;
+}
+
+.player.leader::after {
+  content: "LEADING";
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: var(--amber);
+  color: var(--bg-0);
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(255, 203, 71, 0.5);
+  animation: glow-pulse 1.5s infinite alternate;
+}
+
+@keyframes glow-pulse {
+  from { opacity: 0.8; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.05); }
 }
 
 .player .who {
