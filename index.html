@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>CUBE リバーシ</title>
+<style>
+  :root {
+    --bg-0: #05060c;
+    --bg-1: #0b0f1e;
+    --ink: #e6f2ff;
+    --muted: #7a88a8;
+    --grid: rgba(120, 180, 255, 0.12);
+    --edge: rgba(120, 180, 255, 0.35);
+    --cyan: #28f3ff;
+    --cyan-soft: #6ef8ff;
+    --magenta: #ff3ea5;
+    --magenta-soft: #ff8ecd;
+    --amber: #ffcb47;
+    --danger: #ff5271;
+    --face-bg: #0a1026;
+    --face-bg-2: #070a18;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(40, 243, 255, 0.18), transparent 55%),
+      radial-gradient(ellipse at 50% 110%, rgba(255, 62, 165, 0.18), transparent 55%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    color: var(--ink);
+    font-family: "SF Mono", ui-monospace, "Menlo", "Consolas", monospace;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    height: 100svh;
+    width: 100vw;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    padding: max(env(safe-area-inset-top), 12px) 14px max(env(safe-area-inset-bottom), 12px);
+    gap: 10px;
+  }
+
+  /* === Header === */
+  .header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+  }
+  .title {
+    font-family: "SF Mono", monospace;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    color: var(--ink);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .title .accent { color: var(--cyan); text-shadow: 0 0 10px rgba(40, 243, 255, 0.8); }
+  .title .accent2 { color: var(--magenta); text-shadow: 0 0 10px rgba(255, 62, 165, 0.8); }
+  .brand-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan), 0 0 16px rgba(40, 243, 255, 0.6);
+  }
+  .brand-dot.m { background: var(--magenta); box-shadow: 0 0 8px var(--magenta), 0 0 16px rgba(255, 62, 165, 0.6); }
+  .brand { display:flex; align-items:center; gap:6px; justify-self:start; font-size: 10px; color: var(--muted); letter-spacing: 0.2em; }
+  .menu { justify-self: end; display:flex; gap: 8px; }
+  .icon-btn {
+    background: rgba(120, 180, 255, 0.06);
+    border: 1px solid var(--edge);
+    color: var(--ink);
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-family: inherit;
+    letter-spacing: 0.1em;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn:active { transform: scale(0.95); }
+
+  /* === Score bar === */
+  .scorebar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .player {
+    position: relative;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+    border: 1px solid var(--edge);
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 4px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .player.active.p1 {
+    border-color: rgba(40, 243, 255, 0.7);
+    box-shadow: 0 0 0 1px rgba(40, 243, 255, 0.3), 0 0 24px rgba(40, 243, 255, 0.25);
+  }
+  .player.active.p2 {
+    border-color: rgba(255, 62, 165, 0.7);
+    box-shadow: 0 0 0 1px rgba(255, 62, 165, 0.3), 0 0 24px rgba(255, 62, 165, 0.25);
+  }
+  .player .who {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px; letter-spacing: 0.2em; color: var(--muted);
+  }
+  .player.p1 .who .dot { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .player.p2 .who .dot { background: var(--magenta); box-shadow: 0 0 10px var(--magenta); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .row2 {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  }
+  .score-val {
+    font-size: 26px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .p1 .score-val { color: var(--cyan); text-shadow: 0 0 14px rgba(40, 243, 255, 0.55); }
+  .p2 .score-val { color: var(--magenta); text-shadow: 0 0 14px rgba(255, 62, 165, 0.55); }
+  .timer {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    opacity: 0.9;
+  }
+  .timer.low { color: var(--danger); animation: pulse .8s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.45; } }
+
+  .vs {
+    align-self: center;
+    justify-self: center;
+    font-size: 10px; letter-spacing: 0.25em;
+    color: var(--muted);
+    padding: 4px 8px;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.3);
+  }
+
+  /* === Stage === */
+  .stage-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  .stage {
+    position: relative;
+    width: min(86vw, 420px);
+    aspect-ratio: 1 / 1;
+    perspective: 1400px;
+    perspective-origin: 50% 45%;
+    touch-action: none;
+  }
+  /* Grid floor */
+  .floor {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 220%; height: 220%;
+    transform: translate(-50%, 18%) rotateX(70deg);
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 28px 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 28px 28px;
+    -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 60%);
+            mask-image: radial-gradient(ellipse at center, black 0%, transparent 60%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .glow {
+    position: absolute;
+    inset: -10%;
+    background: radial-gradient(circle at 50% 55%, rgba(40, 243, 255, 0.18), transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .cube {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transition: transform .55s cubic-bezier(.22,.61,.36,1);
+    z-index: 2;
+  }
+  .cube.dragging { transition: none; }
+
+  .face {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 72%; height: 72%;
+    transform-style: preserve-3d;
+    backface-visibility: visible;
+  }
+  .face-inner {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(135deg, rgba(120, 180, 255, 0.06), rgba(120, 180, 255, 0.00) 40%),
+      var(--face-bg);
+    border-radius: 6px;
+    box-shadow:
+      inset 0 0 0 1px rgba(120, 180, 255, 0.25),
+      inset 0 0 28px rgba(0, 0, 0, 0.6),
+      0 0 24px rgba(40, 243, 255, 0.04);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 3%;
+    padding: 4%;
+  }
+  .face[data-face="front"] .face-inner { --tint: 40, 243, 255; }
+  .face[data-face="back"]  .face-inner { --tint: 255, 62, 165; }
+  .face[data-face="right"] .face-inner { --tint: 255, 203, 71; }
+  .face[data-face="left"]  .face-inner { --tint: 120, 255, 180; }
+  .face[data-face="top"]   .face-inner { --tint: 180, 120, 255; }
+  .face[data-face="bottom"]   .face-inner { --tint: 255, 140, 120; }
+  .face-inner::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(var(--tint), 0.25);
+    pointer-events: none;
+  }
+  .face-label {
+    position: absolute;
+    top: -18px; left: 2px;
+    font-size: 9px; letter-spacing: 0.3em;
+    color: rgba(var(--tint), 0.75);
+    font-weight: 600;
+  }
+  .cell {
+    position: relative;
+    border-radius: 4px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+      rgba(0, 0, 0, 0.35);
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--tint), 0.18),
+      inset 0 0 8px rgba(0, 0, 0, 0.6);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s, transform .15s;
+  }
+  .cell-num {
+    position: absolute;
+    top: 3px; left: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: rgba(var(--tint), 0.55);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  .cell.has-stone .cell-num { opacity: 0.35; }
+  .cell.hint .cell-num { color: rgba(var(--tint), 0.95); }
+  .cell:active { transform: scale(0.96); }
+  .cell.hint {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(var(--tint), 0.18), rgba(var(--tint), 0.02) 60%),
+      rgba(0, 0, 0, 0.35);
+    box-shadow:
+      inset 0 0 0 1px rgba(var(--tint), 0.7),
+      inset 0 0 12px rgba(var(--tint), 0.35);
+  }
+  .cell.hint::after {
+    content: "";
+    width: 22%; height: 22%; border-radius: 50%;
+    background: rgba(var(--tint), 0.9);
+    box-shadow: 0 0 10px rgba(var(--tint), 0.9);
+    animation: hintPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0%, 100% { transform: scale(0.7); opacity: 0.6; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+  .stone {
+    width: 76%; height: 76%;
+    border-radius: 50%;
+    position: relative;
+    animation: placeIn .35s cubic-bezier(.22,.61,.36,1);
+    transform-origin: center;
+  }
+  .stone.p1 {
+    background: radial-gradient(circle at 35% 30%, #b6faff 0%, var(--cyan) 35%, #0a9aaa 80%, #064953 100%);
+    box-shadow:
+      0 0 0 1px rgba(40, 243, 255, 0.9),
+      0 0 14px rgba(40, 243, 255, 0.7),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+      inset 0 2px 3px rgba(255, 255, 255, 0.35);
+  }
+  .stone.p2 {
+    background: radial-gradient(circle at 35% 30%, #ffc0e0 0%, var(--magenta) 35%, #7a0845 80%, #3a0321 100%);
+    box-shadow:
+      0 0 0 1px rgba(255, 62, 165, 0.9),
+      0 0 14px rgba(255, 62, 165, 0.7),
+      inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+      inset 0 2px 3px rgba(255, 255, 255, 0.35);
+  }
+  .stone.just-flipped { animation: flipIn .45s cubic-bezier(.22,.61,.36,1); }
+  @keyframes placeIn {
+    from { transform: scale(0.2); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes flipIn {
+    0% { transform: rotateY(0deg) scale(1); }
+    50% { transform: rotateY(90deg) scale(0.8); }
+    100% { transform: rotateY(180deg) scale(1); }
+  }
+
+  /* === Controls === */
+  .controls {
+    display: flex; flex-direction: column;
+    gap: 10px;
+  }
+  .status {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    min-height: 16px;
+    text-transform: uppercase;
+  }
+  .status b { color: var(--ink); font-weight: 600; }
+  .status.flash { color: var(--cyan); }
+
+  .rotate-pad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .rotate-btn {
+    background: rgba(120, 180, 255, 0.04);
+    border: 1px solid var(--edge);
+    color: var(--ink);
+    padding: 10px 0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+  }
+  .rotate-btn:active { transform: scale(0.96); background: rgba(40, 243, 255, 0.08); }
+  .rotate-btn svg { width: 14px; height: 14px; stroke: var(--cyan); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .action-btn {
+    background: rgba(120, 180, 255, 0.04);
+    border: 1px solid var(--edge);
+    color: var(--ink);
+    padding: 12px 0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+  }
+  .action-btn.primary {
+    background: linear-gradient(180deg, rgba(40, 243, 255, 0.18), rgba(40, 243, 255, 0.04));
+    border-color: rgba(40, 243, 255, 0.6);
+    color: #d9fbff;
+    text-shadow: 0 0 8px rgba(40, 243, 255, 0.6);
+  }
+  .action-btn.primary:active { background: rgba(40, 243, 255, 0.3); }
+  .action-btn.danger {
+    border-color: rgba(255, 82, 113, 0.4);
+    color: #ffb9c4;
+  }
+  .action-btn:active { transform: scale(0.97); }
+  .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Face selector tabs */
+  .face-tabs {
+    display: flex; gap: 6px; justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-size: 10px; letter-spacing: 0.15em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--edge);
+    background: rgba(255,255,255,0.02);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tab.active { color: var(--ink); border-color: rgba(40, 243, 255, 0.7); box-shadow: 0 0 12px rgba(40, 243, 255, 0.25); }
+
+  /* === Overlay (modal) === */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 5, 12, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: min(86vw, 360px);
+    border: 1px solid var(--edge);
+    background: linear-gradient(180deg, #0b1128, #05070f);
+    border-radius: 16px;
+    padding: 24px 22px;
+    box-shadow: 0 0 40px rgba(40, 243, 255, 0.1);
+    text-align: center;
+  }
+  .modal h2 {
+    margin: 0 0 4px;
+    font-size: 12px; letter-spacing: 0.3em;
+    color: var(--muted); font-weight: 600;
+  }
+  .modal .big {
+    font-size: 26px; font-weight: 700;
+    margin: 8px 0 14px;
+    letter-spacing: 0.08em;
+  }
+  .modal .big.win { color: var(--cyan); text-shadow: 0 0 16px rgba(40, 243, 255, 0.6); }
+  .modal .big.lose { color: var(--magenta); text-shadow: 0 0 16px rgba(255, 62, 165, 0.6); }
+  .modal .big.draw { color: var(--amber); }
+  .modal .final {
+    display: flex; justify-content: center; gap: 18px;
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .modal .final .num { font-size: 22px; font-weight: 700; color: var(--ink); display:block; }
+  .modal .final .p1 .num { color: var(--cyan); }
+  .modal .final .p2 .num { color: var(--magenta); }
+
+  /* Tutorial overlay */
+  .tut {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(3,5,12,0.94);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    opacity: 1; transition: opacity .3s;
+  }
+  .tut.hidden { opacity: 0; pointer-events: none; }
+  .tut-inner {
+    max-width: 320px;
+    text-align: center;
+  }
+  .tut-logo {
+    font-size: 11px; letter-spacing: 0.4em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .tut-title {
+    font-size: 28px; font-weight: 700;
+    letter-spacing: 0.1em;
+    margin: 0 0 10px;
+  }
+  .tut-title .c { color: var(--cyan); text-shadow: 0 0 14px rgba(40, 243, 255, 0.7); }
+  .tut-title .m { color: var(--magenta); text-shadow: 0 0 14px rgba(255, 62, 165, 0.7); }
+  .tut-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 22px; line-height: 1.6; }
+  .tut-rows {
+    display: grid; gap: 12px; margin-bottom: 22px; text-align: left;
+  }
+  .tut-row {
+    display: grid; grid-template-columns: 36px 1fr; gap: 12px; align-items: center;
+    font-size: 11px; color: var(--ink); letter-spacing: 0.05em; line-height: 1.4;
+  }
+  .tut-row .ic {
+    width: 36px; height: 36px; border-radius: 10px;
+    border: 1px solid var(--edge);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cyan);
+  }
+  .tut-row .ic svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .big-btn {
+    width: 100%;
+    background: linear-gradient(180deg, rgba(40, 243, 255, 0.25), rgba(40, 243, 255, 0.08));
+    border: 1px solid rgba(40, 243, 255, 0.7);
+    color: #d9fbff;
+    padding: 14px;
+    font-family: inherit;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    font-size: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-shadow: 0 0 10px rgba(40, 243, 255, 0.6);
+    box-shadow: 0 0 30px rgba(40, 243, 255, 0.2);
+  }
+  .big-btn:active { transform: scale(0.98); }
+
+  /* tiny toast */
+  .toast {
+    position: fixed;
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(10, 16, 38, 0.9);
+    border: 1px solid var(--edge);
+    color: var(--ink);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    z-index: 40;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-height: 720px) {
+    .score-val { font-size: 22px; }
+    .action-btn { padding: 10px 0; }
+    .rotate-btn { padding: 8px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    <span>CUBE</span>
+    <span class="brand-dot m"></span>
+  </div>
+  <div class="title"><span class="accent">CUBE</span> リバーシ</div>
+  <div class="menu">
+    <button class="icon-btn" id="helpBtn" aria-label="ヘルプ">?</button>
+    <button class="icon-btn" id="muteBtn" aria-label="サウンド">♪</button>
+  </div>
+</header>
+
+<!-- Score + timers -->
+<section class="scorebar">
+  <div class="player p1 active" id="p1Panel">
+    <div class="who"><span class="dot"></span>YOU</div>
+    <div class="row2">
+      <div class="score-val" id="p1Score">2</div>
+      <div class="timer" id="p1Timer">03:00</div>
+    </div>
+  </div>
+  <div class="vs">VS</div>
+  <div class="player p2" id="p2Panel">
+    <div class="who"><span class="dot"></span>AI</div>
+    <div class="row2">
+      <div class="score-val" id="p2Score">2</div>
+      <div class="timer" id="p2Timer">03:00</div>
+    </div>
+  </div>
+</section>
+
+<!-- Face selector tabs -->
+<div class="face-tabs" id="faceTabs">
+  <!-- filled by JS -->
+</div>
+
+<!-- Stage -->
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <div class="floor"></div>
+    <div class="glow"></div>
+    <div class="cube" id="cube">
+      <!-- 6 faces injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Status line -->
+<div class="status" id="status">SWIPE — キューブを回転</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="rotate-pad">
+    <button class="rotate-btn" data-rot="left" aria-label="左に回転">
+      <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+      LEFT
+    </button>
+    <button class="rotate-btn" data-rot="up" aria-label="上に回転">
+      <svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>
+      UP
+    </button>
+    <button class="rotate-btn" data-rot="down" aria-label="下に回転">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      DOWN
+    </button>
+    <button class="rotate-btn" data-rot="right" aria-label="右に回転">
+      <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+      RIGHT
+    </button>
+  </div>
+  <div class="action-row">
+    <button class="action-btn danger" id="resetBtn">RESET</button>
+    <button class="action-btn" id="passBtn">PASS</button>
+    <button class="action-btn primary" id="nextBtn">NEXT</button>
+  </div>
+</div>
+
+<!-- End-game modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>GAME OVER</h2>
+    <div class="big" id="outcomeText">YOU WIN</div>
+    <div class="final">
+      <div class="p1"><span class="num" id="finalP1">0</span>YOU</div>
+      <div class="p2"><span class="num" id="finalP2">0</span>AI</div>
+    </div>
+    <button class="big-btn" id="playAgainBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<!-- Tutorial / intro -->
+<div class="tut" id="tut">
+  <div class="tut-inner">
+    <div class="tut-logo">◆ NEO-REVERSI</div>
+    <h1 class="tut-title"><span class="c">CUBE</span> <span class="m">リバーシ</span></h1>
+    <div class="tut-sub">3×3×3 の立方体、6面すべてが盤面。<br/>スワイプでキューブを回して、好きな面に石を置こう。</div>
+    <div class="tut-rows">
+      <div class="tut-row">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M7 12h10"/><path d="M17 8l4 4-4 4"/><path d="M7 8L3 12l4 4"/></svg></div>
+        <div>画面をスワイプまたは矢印ボタンでキューブを回転。</div>
+      </div>
+      <div class="tut-row">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div>光っているマスをタップすると石が置けます。</div>
+      </div>
+      <div class="tut-row">
+        <div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M12 10v4"/><path d="M10 12h4"/></svg></div>
+        <div>各面で通常のリバーシ。合計54マス、多い方の勝ち。</div>
+      </div>
+      <div class="tut-row">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <div>制限時間は各3分。切れたら負けです。</div>
+      </div>
+    </div>
+    <button class="big-btn" id="startBtn">START GAME</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =============================================================
+   CUBE リバーシ — logic
+   6 faces × 3×3 = 54 cells. Each face is an independent Reversi
+   board. Players alternate; whoever puts a legal move on ANY
+   face first places that stone. Chess-clock style timer.
+   ============================================================= */
+
+(() => {
+  // ---------------- Config ----------------
+  const FACES = ["front", "right", "back", "left", "top", "bottom"];
+  const FACE_LABEL = {
+    front: "FRONT·01", right: "RIGHT·02", back: "BACK·03",
+    left: "LEFT·04", top: "TOP·05", bottom: "BOT·06",
+  };
+  const EMPTY = 0, P1 = 1, P2 = 2;
+  const TIME_PER_PLAYER = 3 * 60; // seconds
+
+  // 3D transform for each face (translateZ = half cube size handled by a CSS var)
+  // We put the faces using classic CSS cube layout. stageSize drives size.
+  const FACE_TRANSFORMS = {
+    front:  "rotateY(  0deg) translateZ(var(--half))",
+    back:   "rotateY(180deg) translateZ(var(--half))",
+    right:  "rotateY( 90deg) translateZ(var(--half))",
+    left:   "rotateY(-90deg) translateZ(var(--half))",
+    top:    "rotateX( 90deg) translateZ(var(--half))",
+    bottom: "rotateX(-90deg) translateZ(var(--half))",
+  };
+
+  // Reversi 8 directions
+  const DIRS = [
+    [-1,-1],[-1,0],[-1,1],
+    [ 0,-1],       [ 0,1],
+    [ 1,-1],[ 1,0],[ 1,1],
+  ];
+
+  // -------------- State --------------
+  const state = {
+    boards: {},        // {face: number[3][3]}
+    turn: P1,
+    times: { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER },
+    timerId: null,
+    lastTick: 0,
+    rotX: -22,         // current cube rotation (deg)
+    rotY: -28,
+    dragStartX: 0,
+    dragStartY: 0,
+    dragStartRotX: 0,
+    dragStartRotY: 0,
+    dragging: false,
+    gameOver: false,
+    aiThinking: false,
+    muted: false,
+  };
+
+  // -------------- DOM --------------
+  const $ = (id) => document.getElementById(id);
+  const cubeEl = $("cube");
+  const stageEl = $("stage");
+  const statusEl = $("status");
+  const p1ScoreEl = $("p1Score"), p2ScoreEl = $("p2Score");
+  const p1TimerEl = $("p1Timer"), p2TimerEl = $("p2Timer");
+  const p1PanelEl = $("p1Panel"), p2PanelEl = $("p2Panel");
+  const overlayEl = $("overlay");
+  const outcomeText = $("outcomeText");
+  const finalP1 = $("finalP1"), finalP2 = $("finalP2");
+  const toastEl = $("toast");
+  const faceTabsEl = $("faceTabs");
+
+  // -------------- Init boards --------------
+  function makeEmptyBoard() {
+    return [[0,0,0],[0,0,0],[0,0,0]];
+  }
+  function resetBoards() {
+    state.boards = {};
+    for (const f of FACES) state.boards[f] = makeEmptyBoard();
+    // Seed only the FRONT face with a classic 2x2 reversi opening
+    // in the top-left quadrant. Other faces start empty; players
+    // can expand to them once stones reach adjacent edges.
+    const b = state.boards["front"];
+    b[0][0] = P1; b[0][1] = P2;
+    b[1][0] = P2; b[1][1] = P1;
+  }
+
+  // -------------- Build cube DOM --------------
+  function buildCube() {
+    cubeEl.innerHTML = "";
+    let cellNumber = 1;
+    for (const f of FACES) {
+      const face = document.createElement("div");
+      face.className = "face";
+      face.dataset.face = f;
+      face.style.transform = FACE_TRANSFORMS[f];
+
+      const inner = document.createElement("div");
+      inner.className = "face-inner";
+
+      const label = document.createElement("div");
+      label.className = "face-label";
+      label.textContent = FACE_LABEL[f];
+      inner.appendChild(label);
+
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.face = f;
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+          const num = document.createElement("span");
+          num.className = "cell-num";
+          num.textContent = String(cellNumber++);
+          cell.appendChild(num);
+          inner.appendChild(cell);
+        }
+      }
+      face.appendChild(inner);
+      cubeEl.appendChild(face);
+    }
+    sizeCube();
+  }
+
+  function sizeCube() {
+    // half of face size = translateZ distance
+    // Face is 72% of stage; so half = 36% of stage width
+    const size = stageEl.getBoundingClientRect().width;
+    cubeEl.style.setProperty("--half", `${size * 0.36}px`);
+  }
+  window.addEventListener("resize", sizeCube);
+
+  // -------------- Face tabs --------------
+  function buildFaceTabs() {
+    faceTabsEl.innerHTML = "";
+    const labels = [
+      { f: "front", t: "FRONT" },
+      { f: "right", t: "RIGHT" },
+      { f: "back",  t: "BACK" },
+      { f: "left",  t: "LEFT" },
+      { f: "top",   t: "TOP" },
+      { f: "bottom",t: "BOT" },
+    ];
+    for (const l of labels) {
+      const b = document.createElement("button");
+      b.className = "tab";
+      b.textContent = l.t;
+      b.dataset.face = l.f;
+      b.addEventListener("click", () => snapToFace(l.f));
+      faceTabsEl.appendChild(b);
+    }
+  }
+
+  function snapToFace(face) {
+    const preset = {
+      front:  { x: -10, y:  -15 },
+      right:  { x: -10, y: -105 },
+      back:   { x: -10, y: -195 },
+      left:   { x: -10, y:   75 },
+      top:    { x: -80, y:  -15 },
+      bottom: { x:  70, y:  -15 },
+    };
+    const p = preset[face]; if (!p) return;
+    state.rotX = p.x; state.rotY = p.y;
+    applyRotation(true);
+    updateActiveTab();
+  }
+
+  function updateActiveTab() {
+    const current = closestFace();
+    [...faceTabsEl.children].forEach(el => {
+      el.classList.toggle("active", el.dataset.face === current);
+    });
+  }
+
+  // return the face currently nearest to viewer given rotation
+  function closestFace() {
+    // face normals in cube-local space:
+    const normals = {
+      front:  [ 0, 0, 1],
+      back:   [ 0, 0,-1],
+      right:  [ 1, 0, 0],
+      left:   [-1, 0, 0],
+      top:    [ 0,-1, 0],
+      bottom: [ 0, 1, 0],
+    };
+    // Apply rotation X then rotation Y (matching CSS: rotateX then rotateY, we use rotateY then rotateX)
+    // Our transform is: rotateX(rotX) rotateY(rotY); camera at +Z.
+    // To see which face's normal has largest +Z after transform:
+    const rx = state.rotX * Math.PI / 180;
+    const ry = state.rotY * Math.PI / 180;
+    function rotate(v) {
+      let [x,y,z] = v;
+      // rotateY: (x,z) around y
+      const cy = Math.cos(ry), sy = Math.sin(ry);
+      const x1 = x*cy + z*sy;
+      const z1 = -x*sy + z*cy;
+      x = x1; z = z1;
+      // rotateX: (y,z) around x
+      const cx = Math.cos(rx), sx = Math.sin(rx);
+      const y1 = y*cx - z*sx;
+      const z2 = y*sx + z*cx;
+      y = y1; z = z2;
+      return [x,y,z];
+    }
+    let best = null, bestZ = -Infinity;
+    for (const f of FACES) {
+      const z = rotate(normals[f])[2];
+      if (z > bestZ) { bestZ = z; best = f; }
+    }
+    return best;
+  }
+
+  // -------------- Rotation --------------
+  function applyRotation(smooth = false) {
+    if (smooth) cubeEl.classList.remove("dragging");
+    else cubeEl.classList.add("dragging");
+    cubeEl.style.transform = `rotateX(${state.rotX}deg) rotateY(${state.rotY}deg)`;
+    updateActiveTab();
+  }
+
+  // Drag / swipe rotation
+  stageEl.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".cell")) {
+      // allow cell click — but also start potential drag.
+      // We'll only start drag on movement > threshold.
+    }
+    state.dragStartX = e.clientX;
+    state.dragStartY = e.clientY;
+    state.dragStartRotX = state.rotX;
+    state.dragStartRotY = state.rotY;
+    state.pointerDownCell = e.target.closest(".cell");
+    state.dragging = false;
+  });
+  stageEl.addEventListener("pointermove", (e) => {
+    if (!e.buttons && e.pointerType === "mouse") return;
+    const dx = e.clientX - state.dragStartX;
+    const dy = e.clientY - state.dragStartY;
+    if (!state.dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      state.dragging = true;
+      cubeEl.classList.add("dragging");
+    }
+    if (state.dragging) {
+      state.rotY = state.dragStartRotY + dx * 0.55;
+      state.rotX = clamp(state.dragStartRotX - dy * 0.55, -85, 85);
+      cubeEl.style.transform = `rotateX(${state.rotX}deg) rotateY(${state.rotY}deg)`;
+    }
+  });
+  function endDrag(e) {
+    const wasDrag = state.dragging;
+    if (state.dragging) {
+      state.dragging = false;
+      cubeEl.classList.remove("dragging");
+      updateActiveTab();
+    }
+    // If it wasn't a drag, treat as a tap on the cell under pointerdown
+    if (!wasDrag && state.pointerDownCell && e.type === "pointerup") {
+      const cell = state.pointerDownCell;
+      const up = e.target.closest(".cell");
+      if (up === cell) handleCellTap(cell);
+    }
+    state.pointerDownCell = null;
+  }
+  stageEl.addEventListener("pointerup", endDrag);
+  stageEl.addEventListener("pointercancel", endDrag);
+
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  // Rotate buttons
+  document.querySelectorAll(".rotate-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dir = btn.dataset.rot;
+      const step = 90;
+      if (dir === "left")  state.rotY -= step;
+      if (dir === "right") state.rotY += step;
+      if (dir === "up")    state.rotX = clamp(state.rotX + step, -85, 85);
+      if (dir === "down")  state.rotX = clamp(state.rotX - step, -85, 85);
+      // If we rotated past limits on X, wrap back
+      applyRotation(true);
+    });
+  });
+
+  // -------------- Reversi rules (cross-face) --------------
+  function opposite(p) { return p === P1 ? P2 : P1; }
+
+  // Build a global cell graph. Each cell has a 3D position on the
+  // cube surface. Neighbors = any cell within a distance threshold.
+  // Line-walking: given a "direction" vector, step by finding the
+  // neighbor whose relative position best matches the direction;
+  // after each step the direction is recomputed from the previous
+  // cell, so the walk naturally bends across cube edges.
+  // Cube coords: each face is a 3x3 grid, cell size = 2/3, face
+  // size = 2 (half-extent = 1).
+  const CELL_S = 2 / 3;
+  // Face basis: for each face, u = right direction in 3D, v = down,
+  // n = outward normal. So 3D pos of cell (r,c) on face =
+  //   n * 1 + u * ((c - 1) * CELL_S) + v * ((r - 1) * CELL_S)
+  const FACE_BASIS = {
+    // front (+Z): right = +X, down = -Y
+    front:  { n: [0,0, 1], u: [ 1, 0, 0], v: [0,-1, 0] },
+    // back  (-Z): right = -X, down = -Y
+    back:   { n: [0,0,-1], u: [-1, 0, 0], v: [0,-1, 0] },
+    // right (+X): right = -Z, down = -Y
+    right:  { n: [ 1,0,0], u: [ 0, 0,-1], v: [0,-1, 0] },
+    // left  (-X): right = +Z, down = -Y
+    left:   { n: [-1,0,0], u: [ 0, 0, 1], v: [0,-1, 0] },
+    // top   (+Y normal points up but CSS rotateX(90) shows top): right = +X, down = +Z
+    top:    { n: [0, 1,0], u: [ 1, 0, 0], v: [0, 0, 1] },
+    // bottom(-Y): right = +X, down = -Z
+    bottom: { n: [0,-1,0], u: [ 1, 0, 0], v: [0, 0,-1] },
+  };
+
+  function cellPos3D(face, r, c) {
+    const b = FACE_BASIS[face];
+    const out = [0,0,0];
+    for (let i = 0; i < 3; i++) {
+      out[i] = b.n[i] + b.u[i] * ((c - 1) * CELL_S) + b.v[i] * ((r - 1) * CELL_S);
+    }
+    return out;
+  }
+  function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+  function len(a){return Math.hypot(a[0],a[1],a[2]);}
+  function norm(a){const l=len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];}
+  function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+
+  // Build every cell's list of neighbors (face,r,c) with a direction
+  // vector from this cell to that cell.
+  let CELLS = []; // flat list: {id, face, r, c, pos, number}
+  let NEIGHBORS = {}; // key `face:r:c` -> [{key, dir(normalized), dist}]
+  const KEY = (f,r,c) => `${f}:${r}:${c}`;
+
+  function buildCellGraph() {
+    CELLS = [];
+    let idx = 0;
+    for (const f of FACES) {
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          CELLS.push({ id: idx, number: idx + 1, face: f, r, c, pos: cellPos3D(f, r, c) });
+          idx++;
+        }
+      }
+    }
+    // Neighbor threshold: slightly larger than the diagonal of one
+    // cell (CELL_S * sqrt(2) ~= 0.943), but smaller than 2 cells.
+    const THRESH = CELL_S * 1.7;
+    NEIGHBORS = {};
+    for (const a of CELLS) {
+      const neigh = [];
+      for (const b of CELLS) {
+        if (a === b) continue;
+        const d = sub(b.pos, a.pos);
+        const dist = len(d);
+        if (dist < THRESH) {
+          neigh.push({ key: KEY(b.face,b.r,b.c), face:b.face, r:b.r, c:b.c, dir: norm(d), dist });
+        }
+      }
+      NEIGHBORS[KEY(a.face,a.r,a.c)] = neigh;
+    }
+  }
+
+  function getCell(face,r,c) {
+    return state.boards[face][r][c];
+  }
+  function setCell(face,r,c,v) {
+    state.boards[face][r][c] = v;
+  }
+
+  // Walk from (face,r,c) in direction dir (3D unit vec), with the
+  // previous cell's position for perpendicular-distance scoring.
+  // Returns the neighbor cell that best continues the line, OR null.
+  function stepInDir(face, r, c, dir) {
+    const neigh = NEIGHBORS[KEY(face,r,c)];
+    const here = cellPos3D(face, r, c);
+    let best = null, bestScore = -Infinity;
+    for (const n of neigh) {
+      const d = dot(n.dir, dir);
+      if (d < 0.5) continue; // must be in the general forward direction
+      // Perpendicular distance from ray: small is good. Combine with
+      // alignment: prefer most aligned, tiebreak by nearer.
+      const score = d - n.dist * 0.05;
+      if (score > bestScore) { bestScore = score; best = n; }
+    }
+    return best;
+  }
+
+  // Project v onto plane with normal n (remove component along n).
+  function projectTangent(v, n) {
+    const d = dot(v, n);
+    return norm([v[0] - n[0]*d, v[1] - n[1]*d, v[2] - n[2]*d]);
+  }
+
+  function flipsForCell(face, r, c, player) {
+    if (getCell(face,r,c) !== EMPTY) return [];
+    const opp = opposite(player);
+    const start = cellPos3D(face, r, c);
+    const allFlips = [];
+    const neigh = NEIGHBORS[KEY(face,r,c)];
+    // For each neighbor direction, walk along that direction.
+    for (const n0 of neigh) {
+      if (getCell(n0.face, n0.r, n0.c) !== opp) continue;
+      // Walk - tangent-project onto starting face for initial dir
+      const line = [{face:n0.face, r:n0.r, c:n0.c}];
+      let cur = n0;
+      let curDir = projectTangent(n0.dir, FACE_BASIS[n0.face].n);
+      let found = false;
+      let safety = 30;
+      while (safety-- > 0) {
+        const nxt = stepInDir(cur.face, cur.r, cur.c, curDir);
+        if (!nxt) break;
+        const v = getCell(nxt.face, nxt.r, nxt.c);
+        if (v === opp) {
+          line.push({face:nxt.face, r:nxt.r, c:nxt.c});
+          // Re-project direction onto the new face's tangent plane
+          curDir = projectTangent(nxt.dir, FACE_BASIS[nxt.face].n);
+          cur = nxt;
+        } else if (v === player) {
+          found = true;
+          break;
+        } else {
+          break;
+        }
+      }
+      if (found) allFlips.push(...line);
+    }
+    // Dedupe
+    const seen = new Set();
+    return allFlips.filter(f => {
+      const k = KEY(f.face,f.r,f.c);
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+  }
+
+  function legalMovesOnFace(face, player) {
+    const moves = [];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (getCell(face,r,c) !== EMPTY) continue;
+        const f = flipsForCell(face, r, c, player);
+        if (f.length) moves.push({ r, c, flips: f });
+      }
+    }
+    return moves;
+  }
+
+  function anyLegalMoves(player) {
+    for (const f of FACES) {
+      if (legalMovesOnFace(f, player).length) return true;
+    }
+    return false;
+  }
+
+  function applyMove(face, r, c, player) {
+    const flips = flipsForCell(face, r, c, player);
+    if (!flips.length) return null;
+    setCell(face, r, c, player);
+    for (const f of flips) setCell(f.face, f.r, f.c, player);
+    return flips;
+  }
+
+  // -------------- Rendering --------------
+  function render() {
+    for (const face of FACES) {
+      const b = state.boards[face];
+      const legal = state.gameOver ? [] : legalMovesOnFace(face, state.turn);
+      const legalSet = new Set(legal.map(m => m.r * 3 + m.c));
+      const cells = cubeEl.querySelectorAll(`.face[data-face="${face}"] .cell`);
+      cells.forEach(cell => {
+        const r = +cell.dataset.r, c = +cell.dataset.c;
+        const v = b[r][c];
+        cell.classList.toggle("hint", state.turn === P1 && legalSet.has(r*3+c));
+        cell.classList.toggle("has-stone", v !== EMPTY);
+        // Keep stone if already present, else update
+        const existing = cell.querySelector(".stone");
+        if (v === EMPTY) {
+          if (existing) existing.remove();
+        } else {
+          const cls = v === P1 ? "p1" : "p2";
+          if (!existing) {
+            const s = document.createElement("div");
+            s.className = `stone ${cls}`;
+            cell.appendChild(s);
+          } else if (!existing.classList.contains(cls)) {
+            existing.className = `stone ${cls} just-flipped`;
+            setTimeout(() => existing.classList.remove("just-flipped"), 500);
+          }
+        }
+      });
+    }
+    updateScores();
+  }
+
+  function updateScores() {
+    let s1 = 0, s2 = 0;
+    for (const f of FACES) for (let r=0;r<3;r++) for (let c=0;c<3;c++) {
+      const v = state.boards[f][r][c];
+      if (v === P1) s1++; else if (v === P2) s2++;
+    }
+    p1ScoreEl.textContent = s1;
+    p2ScoreEl.textContent = s2;
+    return { s1, s2 };
+  }
+
+  // -------------- Turn flow --------------
+  function setTurn(p, reason = "") {
+    state.turn = p;
+    p1PanelEl.classList.toggle("active", p === P1);
+    p2PanelEl.classList.toggle("active", p === P2);
+    statusEl.innerHTML = p === P1
+      ? `<b>YOUR TURN</b> — 光るマスをタップ`
+      : `<b>AI THINKING…</b>`;
+    render();
+
+    if (state.gameOver) return;
+
+    // Check legal moves
+    if (!anyLegalMoves(P1) && !anyLegalMoves(P2)) {
+      endGame();
+      return;
+    }
+    if (!anyLegalMoves(p)) {
+      showToast(p === P1 ? "PASS — 置ける場所なし" : "AI PASS");
+      setTimeout(() => setTurn(opposite(p), "pass"), 700);
+      return;
+    }
+
+    if (p === P2) {
+      state.aiThinking = true;
+      setTimeout(aiMove, 650 + Math.random() * 400);
+    }
+  }
+
+  function handleCellTap(cell) {
+    if (state.gameOver) return;
+    if (state.turn !== P1) return;
+    const face = cell.dataset.face;
+    const r = +cell.dataset.r, c = +cell.dataset.c;
+    // Check move legality directly. If not legal but face isn't
+    // currently facing the camera, snap to it so the user can see.
+    const flips = applyMove(face, r, c, P1);
+    if (!flips) {
+      if (face !== closestFace()) {
+        snapToFace(face);
+        showToast(`${FACE_LABEL[face]} に回転`);
+      } else {
+        showToast("置けません");
+      }
+      return;
+    }
+    playSound("place");
+    render();
+    updateScores();
+    setTurn(P2);
+  }
+
+  // -------------- AI --------------
+  // Corner > edge > center preference. Simple but decent on 3x3.
+  const WEIGHT = [
+    [ 8, 2, 8],
+    [ 2, 4, 2],
+    [ 8, 2, 8],
+  ];
+
+  function aiMove() {
+    if (state.gameOver) return;
+    // Rotate cube to the face AI picks so the user can see it.
+    let best = null;
+    for (const f of FACES) {
+      for (const m of legalMovesOnFace(f, P2)) {
+        const score = m.flips.length * 3 + WEIGHT[m.r][m.c]
+                    + Math.random() * 0.9;
+        if (!best || score > best.score) best = { face: f, ...m, score };
+      }
+    }
+    if (!best) {
+      state.aiThinking = false;
+      setTurn(P1);
+      return;
+    }
+    snapToFace(best.face);
+    setTimeout(() => {
+      applyMove(best.face, best.r, best.c, P2);
+      playSound("place");
+      render();
+      state.aiThinking = false;
+      setTurn(P1);
+    }, 550);
+  }
+
+  // -------------- Timer --------------
+  function startTimer() {
+    stopTimer();
+    state.lastTick = performance.now();
+    state.timerId = setInterval(() => {
+      if (state.gameOver) return;
+      const now = performance.now();
+      const dt = (now - state.lastTick) / 1000;
+      state.lastTick = now;
+      state.times[state.turn] -= dt;
+      if (state.times[state.turn] <= 0) {
+        state.times[state.turn] = 0;
+        updateTimers();
+        endGame(opposite(state.turn), "TIME OUT");
+        return;
+      }
+      updateTimers();
+    }, 100);
+  }
+  function stopTimer() {
+    if (state.timerId) clearInterval(state.timerId);
+    state.timerId = null;
+  }
+  function fmt(t) {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+  function updateTimers() {
+    p1TimerEl.textContent = fmt(state.times[P1]);
+    p2TimerEl.textContent = fmt(state.times[P2]);
+    p1TimerEl.classList.toggle("low", state.times[P1] < 30);
+    p2TimerEl.classList.toggle("low", state.times[P2] < 30);
+  }
+
+  // -------------- End game --------------
+  function endGame(winner = null, reason = "") {
+    state.gameOver = true;
+    stopTimer();
+    const { s1, s2 } = updateScores();
+    let outcome;
+    if (winner === P1 || (winner == null && s1 > s2)) outcome = "YOU WIN";
+    else if (winner === P2 || (winner == null && s2 > s1)) outcome = "YOU LOSE";
+    else outcome = "DRAW";
+    outcomeText.textContent = outcome + (reason ? ` · ${reason}` : "");
+    outcomeText.className = "big " + (outcome === "YOU WIN" ? "win" : outcome === "YOU LOSE" ? "lose" : "draw");
+    finalP1.textContent = s1;
+    finalP2.textContent = s2;
+    overlayEl.classList.add("open");
+    render();
+  }
+
+  // -------------- Toast / sound --------------
+  let toastTimer = null;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1500);
+  }
+
+  let audioCtx = null;
+  function playSound(kind) {
+    if (state.muted) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      if (kind === "place") {
+        o.type = "triangle";
+        o.frequency.setValueAtTime(520, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.18);
+        g.gain.setValueAtTime(0.12, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+        o.start(); o.stop(ctx.currentTime + 0.22);
+      } else {
+        o.type = "sine";
+        o.frequency.value = 440;
+        g.gain.setValueAtTime(0.08, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+        o.start(); o.stop(ctx.currentTime + 0.16);
+      }
+    } catch (e) {}
+  }
+
+  // -------------- Actions --------------
+  $("resetBtn").addEventListener("click", () => {
+    if (confirm("ゲームをリセットしますか？")) resetGame();
+  });
+  $("passBtn").addEventListener("click", () => {
+    if (state.gameOver || state.turn !== P1) return;
+    if (anyLegalMoves(P1)) {
+      showToast("まだ置ける場所があります");
+      return;
+    }
+    setTurn(P2);
+  });
+  $("nextBtn").addEventListener("click", () => {
+    // NEXT = end your turn early if you have no move, or skip AI wait visually.
+    // For clarity, NEXT is "手番終了/次のプレイヤー" — basically PASS if no moves;
+    // otherwise it's the same as confirming your move (no-op since moves auto-end turn).
+    if (state.gameOver) return;
+    if (state.turn === P1) {
+      if (anyLegalMoves(P1)) showToast("光るマスをタップしてください");
+      else setTurn(P2);
+    }
+  });
+  $("playAgainBtn").addEventListener("click", () => {
+    overlayEl.classList.remove("open");
+    resetGame();
+  });
+  $("helpBtn").addEventListener("click", () => {
+    $("tut").classList.remove("hidden");
+  });
+  $("muteBtn").addEventListener("click", () => {
+    state.muted = !state.muted;
+    $("muteBtn").textContent = state.muted ? "♪̸" : "♪";
+    $("muteBtn").style.opacity = state.muted ? "0.5" : "1";
+  });
+  $("startBtn").addEventListener("click", () => {
+    $("tut").classList.add("hidden");
+    resetGame();
+  });
+
+  function resetGame() {
+    state.gameOver = false;
+    state.aiThinking = false;
+    state.times = { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER };
+    state.turn = P1;
+    resetBoards();
+    applyRotation(true);
+    render();
+    updateTimers();
+    startTimer();
+    setTurn(P1);
+  }
+
+  // -------------- Boot --------------
+  function boot() {
+    buildCellGraph();
+    buildFaceTabs();
+    buildCube();
+    resetBoards();
+    applyRotation(true);
+    render();
+    updateTimers();
+    // tutorial starts game on click
+  }
+  boot();
+})();
+
+</script>
+</body>
+</html>
