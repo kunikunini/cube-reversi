@@ -772,12 +772,24 @@ import "./style.css";
   }
 
   let audioCtx = null;
+  let bgmGain = null;
+  let bgmSource = null;
   const bgm = new Audio();
   bgm.loop = true;
-  bgm.volume = 0.05; // 0.05 is significantly quieter
   let bgmStarted = false;
 
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    bgmGain = audioCtx.createGain();
+    bgmGain.gain.value = 0.04; // Very quiet
+    bgmGain.connect(audioCtx.destination);
+    bgmSource = audioCtx.createMediaElementSource(bgm);
+    bgmSource.connect(bgmGain);
+  }
+
   function playTitleBgm() {
+    initAudio();
     if (bgm.src.includes("title_bgm.mp3") && !bgm.paused) return;
     bgm.pause();
     bgm.src = "/title_bgm.mp3";
@@ -786,6 +798,7 @@ import "./style.css";
   }
 
   function playGameBgm() {
+    initAudio();
     if (bgm.src.includes("game_bgm.mp3") && !bgm.paused) return;
     bgm.pause();
     bgm.src = "/game_bgm.mp3";
@@ -798,6 +811,7 @@ import "./style.css";
   }
 
   function onFirstInteraction() {
+    initAudio();
     if (bgmStarted) return;
     bgmStarted = true;
     if (!$("tut").classList.contains("hidden")) playTitleBgm();
@@ -807,8 +821,8 @@ import "./style.css";
 
   function playSound(kind) {
     if (state.muted) return;
+    initAudio();
     try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const ctx = audioCtx;
       const o = ctx.createOscillator();
       const g = ctx.createGain();
@@ -818,14 +832,14 @@ import "./style.css";
         o.type = "triangle";
         o.frequency.setValueAtTime(520, ctx.currentTime);
         o.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.18);
-        g.gain.setValueAtTime(0.12, ctx.currentTime);
+        g.gain.setValueAtTime(0.08, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
         o.start();
         o.stop(ctx.currentTime + 0.22);
       } else {
         o.type = "sine";
         o.frequency.value = 440;
-        g.gain.setValueAtTime(0.08, ctx.currentTime);
+        g.gain.setValueAtTime(0.05, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
         o.start();
         o.stop(ctx.currentTime + 0.16);
