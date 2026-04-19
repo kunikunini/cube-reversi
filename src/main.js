@@ -241,6 +241,8 @@ import "./style.css";
   stageEl.addEventListener("pointerdown", (e) => {
     state.pointers.set(e.pointerId, e);
     state.isInertia = false;
+    state.vx = 0; state.vy = 0;
+    
     if (state.pointers.size === 1) {
       state.dragStartX = e.clientX;
       state.dragStartY = e.clientY;
@@ -249,82 +251,85 @@ import "./style.css";
       state.dragStartRotX = state.rotX;
       state.dragStartRotY = state.rotY;
       state.dragging = false;
-      state.vx = 0; state.vy = 0;
     } else if (state.pointers.size === 2) {
       const pts = Array.from(state.pointers.values());
-      state.initialDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+      const dist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+      state.initialDist = dist > 5 ? dist : 5; // Prevent division by zero
       state.initialScale = state.scale;
+      state.dragging = false; // Stop rotation when second finger added
     }
     stageEl.setPointerCapture(e.pointerId);
   });
 
   stageEl.addEventListener("pointermove", (e) => {
+    if (!state.pointers.has(e.pointerId)) return;
     state.pointers.set(e.pointerId, e);
 
     if (state.pointers.size === 2) {
       const pts = Array.from(state.pointers.values());
       const dist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
-      if (state.initialDist > 0) {
-        state.scale = clamp(state.initialScale * (dist / state.initialDist), 0.5, 1.3);
+      if (state.initialDist > 5) {
+        state.scale = clamp(state.initialScale * (dist / state.initialDist), 0.5, 1.4);
         applyRotation();
       }
       return;
     }
 
     if (state.pointers.size === 1) {
-      if (!e.buttons && e.pointerType === "mouse") return;
       const dx = e.clientX - state.dragStartX;
       const dy = e.clientY - state.dragStartY;
       
       const instantaneousVX = (e.clientY - state.lastMouseY) * 0.4;
       const instantaneousVY = (e.clientX - state.lastMouseX) * 0.4;
-      state.vx = state.vx * 0.5 + instantaneousVX * 0.5;
-      state.vy = state.vy * 0.5 + instantaneousVY * 0.5;
+      state.vx = state.vx * 0.7 + instantaneousVX * 0.3;
+      state.vy = state.vy * 0.7 + instantaneousVY * 0.3;
       state.lastMouseX = e.clientX;
       state.lastMouseY = e.clientY;
 
-      if (!state.dragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      if (!state.dragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
         state.dragging = true;
         cubeEl.classList.add("dragging");
       }
       if (state.dragging) {
         state.rotY = state.dragStartRotY + dx * 0.5;
-        state.rotX = clamp(state.dragStartRotX - dy * 0.5, -89, 89);
+        state.rotX = clamp(state.dragStartRotX - dy * 0.5, -85, 85);
         applyRotation();
       }
     }
   });
 
-  function animate() {
-    if (state.isInertia) {
-      state.rotY += state.vy;
-      state.rotX = clamp(state.rotX - state.vx, -89, 89);
-      state.vy *= 0.95;
-      state.vx *= 0.95;
-      applyRotation();
-      if (Math.abs(state.vx) < 0.05 && Math.abs(state.vy) < 0.05) {
-        state.isInertia = false;
-        updateActiveTab();
-      }
-    }
-    requestAnimationFrame(animate);
-  }
-  requestAnimationFrame(animate);
-
   function endDrag(e) {
     state.pointers.delete(e.pointerId);
-    if (state.pointers.size < 2) state.initialDist = 0;
     if (state.pointers.size === 0) {
       if (state.dragging) {
         state.dragging = false;
         state.isInertia = true;
         cubeEl.classList.remove("dragging");
       }
+      state.initialDist = 0;
+    } else {
+      // If fingers remain, reset rotation origin to prevent jumps
+      const last = Array.from(state.pointers.values())[0];
+      state.dragStartX = last.clientX;
+      state.dragStartY = last.clientY;
+      state.lastMouseX = last.clientX;
+      state.lastMouseY = last.clientY;
+      state.dragStartRotX = state.rotX;
+      state.dragStartRotY = state.rotY;
+      state.initialDist = 0;
+      if (state.pointers.size === 1) {
+        state.dragging = false; // Reset drag state for new finger
+      }
     }
   }
 
   stageEl.addEventListener("pointerup", endDrag);
-  stageEl.addEventListener("pointercancel", endDrag);
+  stageEl.addEventListener("pointercancel", (e) => {
+    state.pointers.clear();
+    state.dragging = false;
+    state.initialDist = 0;
+    cubeEl.classList.remove("dragging");
+  });
 
   stageEl.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -337,14 +342,30 @@ import "./style.css";
     return Math.min(b, Math.max(a, v));
   }
 
+  function animate() {
+    if (state.isInertia) {
+      state.rotY += state.vy;
+      state.rotX = clamp(state.rotX - state.vx, -85, 85);
+      state.vy *= 0.95;
+      state.vx *= 0.95;
+      applyRotation();
+      if (Math.abs(state.vx) < 0.05 && Math.abs(state.vy) < 0.05) {
+        state.isInertia = false;
+        updateActiveTab();
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
   document.querySelectorAll(".rotate-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const dir = btn.dataset.rot;
       const step = 90;
       if (dir === "left") state.rotY -= step;
       if (dir === "right") state.rotY += step;
-      if (dir === "up") state.rotX = clamp(state.rotX + step, -89, 89);
-      if (dir === "down") state.rotX = clamp(state.rotX - step, -89, 89);
+      if (dir === "up") state.rotX = clamp(state.rotX + step, -85, 85);
+      if (dir === "down") state.rotX = clamp(state.rotX - step, -85, 85);
       applyRotation(true);
     });
   });
