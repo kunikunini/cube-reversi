@@ -626,6 +626,7 @@
     </div>
     <div id="finalTotal" style="font-size:10px;letter-spacing:0.15em;color:var(--muted);margin-bottom:12px;"></div>
     <button class="big-btn" id="playAgainBtn">PLAY AGAIN</button>
+    <button class="action-btn" id="reviewBtn" style="width:100%;margin-top:8px;">盤面を確認する</button>
   </div>
 </div>
 
@@ -1261,6 +1262,9 @@
   $("playAgainBtn").addEventListener("click", () => {
     overlayEl.classList.remove("open");
     resetGame();
+  });
+  $("reviewBtn").addEventListener("click", () => {
+    overlayEl.classList.remove("open");
   });
   $("helpBtn").addEventListener("click", () => {
     $("tut").classList.remove("hidden");
