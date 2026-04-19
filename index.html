@@ -900,31 +900,113 @@
 
   function opposite(p) { return p === P1 ? P2 : P1; }
 
-  function flipsFor(board, r, c, player) {
-    if (board[r][c] !== EMPTY) return [];
-    const flips = [];
-    for (const [dr, dc] of DIRS) {
-      let i = r + dr, j = c + dc;
-      const line = [];
-      while (i >= 0 && i < 3 && j >= 0 && j < 3 && board[i][j] === opposite(player)) {
-        line.push([i, j]);
-        i += dr; j += dc;
-      }
-      if (line.length && i >= 0 && i < 3 && j >= 0 && j < 3 && board[i][j] === player) {
-        flips.push(...line);
+  // Cross-face edge traversal.
+  // Each face has basis vectors derived from the CSS cube layout:
+  //   front:  n=+Z, u=+X(right), v=-Y(down)
+  //   back:   n=-Z, u=-X(right), v=-Y(down)
+  //   right:  n=+X, u=-Z(right), v=-Y(down)
+  //   left:   n=-X, u=+Z(right), v=-Y(down)
+  //   top:    n=+Y, u=+X(right), v=+Z(down)
+  //   bottom: n=-Y, u=+X(right), v=-Z(down)
+  //
+  // When a straight line (dr=0 or dc=0) exits a face boundary,
+  // crossEdge maps it to the adjacent face with correct (r,c,dr,dc).
+  // Diagonal lines (dr≠0 && dc≠0) cannot cross edges.
+  function crossEdge(face, r, c, dr, dc) {
+    if (dr === -1 && r === 0) { // exit top edge
+      switch (face) {
+        case 'front':  return { face: 'top',    r: 2,   c: c,   dr: -1, dc: 0  };
+        case 'right':  return { face: 'top',    r: 2-c, c: 2,   dr: 0,  dc: -1 };
+        case 'back':   return { face: 'top',    r: 0,   c: 2-c, dr: 1,  dc: 0  };
+        case 'left':   return { face: 'top',    r: c,   c: 0,   dr: 0,  dc: 1  };
+        case 'top':    return { face: 'back',   r: 0,   c: 2-c, dr: 1,  dc: 0  };
+        case 'bottom': return { face: 'front',  r: 2,   c: c,   dr: -1, dc: 0  };
       }
     }
-    return flips;
+    if (dr === 1 && r === 2) { // exit bottom edge
+      switch (face) {
+        case 'front':  return { face: 'bottom', r: 0,   c: c,   dr: 1,  dc: 0  };
+        case 'right':  return { face: 'bottom', r: c,   c: 2,   dr: 0,  dc: -1 };
+        case 'back':   return { face: 'bottom', r: 2,   c: 2-c, dr: -1, dc: 0  };
+        case 'left':   return { face: 'bottom', r: 2-c, c: 0,   dr: 0,  dc: 1  };
+        case 'top':    return { face: 'front',  r: 0,   c: c,   dr: 1,  dc: 0  };
+        case 'bottom': return { face: 'back',   r: 2,   c: 2-c, dr: -1, dc: 0  };
+      }
+    }
+    if (dc === 1 && c === 2) { // exit right edge
+      switch (face) {
+        case 'front':  return { face: 'right',  r: r,   c: 0,   dr: 0,  dc: 1  };
+        case 'right':  return { face: 'back',   r: r,   c: 0,   dr: 0,  dc: 1  };
+        case 'back':   return { face: 'left',   r: r,   c: 0,   dr: 0,  dc: 1  };
+        case 'left':   return { face: 'front',  r: r,   c: 0,   dr: 0,  dc: 1  };
+        case 'top':    return { face: 'right',  r: 0,   c: 2-r, dr: 1,  dc: 0  };
+        case 'bottom': return { face: 'right',  r: 2,   c: r,   dr: -1, dc: 0  };
+      }
+    }
+    if (dc === -1 && c === 0) { // exit left edge
+      switch (face) {
+        case 'front':  return { face: 'left',   r: r,   c: 2,   dr: 0,  dc: -1 };
+        case 'right':  return { face: 'front',  r: r,   c: 2,   dr: 0,  dc: -1 };
+        case 'back':   return { face: 'right',  r: r,   c: 2,   dr: 0,  dc: -1 };
+        case 'left':   return { face: 'back',   r: r,   c: 2,   dr: 0,  dc: -1 };
+        case 'top':    return { face: 'left',   r: 0,   c: r,   dr: 1,  dc: 0  };
+        case 'bottom': return { face: 'left',   r: 2,   c: 2-r, dr: -1, dc: 0  };
+      }
+    }
+    return null;
+  }
+
+  // Returns next cell in direction (dr,dc), crossing face edges if needed.
+  // Diagonal directions (dr≠0 && dc≠0) cannot cross edges.
+  function nextCell(face, r, c, dr, dc) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr <= 2 && nc >= 0 && nc <= 2) {
+      return { face, r: nr, c: nc, dr, dc };
+    }
+    if (dr !== 0 && dc !== 0) return null; // diagonal can't cross edges
+    return crossEdge(face, r, c, dr, dc);
+  }
+
+  // Returns list of {face,r,c} stones flipped if player places at (face,r,c).
+  // Supports cross-face flipping along straight lines.
+  function flipsFor(face, r, c, player) {
+    if (state.boards[face][r][c] !== EMPTY) return [];
+    const opp = opposite(player);
+    const allFlips = [];
+
+    for (const [dr, dc] of DIRS) {
+      const line = [];
+      let cur = nextCell(face, r, c, dr, dc);
+      let safety = 30;
+      while (cur && safety-- > 0) {
+        const v = state.boards[cur.face][cur.r][cur.c];
+        if (v === opp) {
+          line.push({ face: cur.face, r: cur.r, c: cur.c });
+          cur = nextCell(cur.face, cur.r, cur.c, cur.dr, cur.dc);
+        } else if (v === player) {
+          allFlips.push(...line);
+          break;
+        } else {
+          break;
+        }
+      }
+    }
+
+    const seen = new Set();
+    return allFlips.filter(f => {
+      const k = `${f.face}:${f.r}:${f.c}`;
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
   }
 
   function legalMovesOnFace(face, player) {
-    const b = state.boards[face];
     const moves = [];
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
-        if (b[r][c] !== EMPTY) continue;
-        const f = flipsFor(b, r, c, player);
-        if (f.length) moves.push({ r, c, flips: f });
+        if (state.boards[face][r][c] !== EMPTY) continue;
+        const flips = flipsFor(face, r, c, player);
+        if (flips.length) moves.push({ r, c, flips });
       }
     }
     return moves;
@@ -938,11 +1020,10 @@
   }
 
   function applyMove(face, r, c, player) {
-    const b = state.boards[face];
-    const flips = flipsFor(b, r, c, player);
+    const flips = flipsFor(face, r, c, player);
     if (!flips.length) return null;
-    b[r][c] = player;
-    for (const [i, j] of flips) b[i][j] = player;
+    state.boards[face][r][c] = player;
+    for (const f of flips) state.boards[f.face][f.r][f.c] = player;
     return flips;
   }
 
