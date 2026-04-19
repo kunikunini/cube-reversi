@@ -554,6 +554,69 @@ body {
   background: rgba(40, 243, 255, 0.08);
 }
 
+/* === Start Announcement === */
+.start-announcement {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.start-announcement.show {
+  opacity: 1;
+}
+
+.start-text {
+  font-size: clamp(60px, 15vw, 120px);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: #fff;
+  text-shadow: 0 0 10px #fff, 0 0 20px var(--cyan), 0 0 40px var(--cyan), 0 0 60px var(--cyan);
+  transform: scale(2);
+  filter: blur(10px);
+  opacity: 0;
+}
+
+.start-announcement.show .start-text {
+  animation: start-zoom 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes start-zoom {
+  0% { transform: scale(5); filter: blur(20px); opacity: 0; }
+  20% { opacity: 1; filter: blur(5px); }
+  50% { transform: scale(1); filter: blur(0); opacity: 1; }
+  80% { opacity: 1; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+.lightning-effect {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  mix-blend-mode: overlay;
+}
+
+.start-announcement.show .lightning-effect {
+  animation: lightning-flash 0.8s ease-out forwards;
+}
+
+@keyframes lightning-flash {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  10% { opacity: 0.2; }
+  15% { opacity: 0.8; }
+  20% { opacity: 0; }
+  30% { opacity: 0.4; }
+  40% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
 .rotate-btn svg {
   width: 14px;
   height: 14px;

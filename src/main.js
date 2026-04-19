@@ -930,6 +930,13 @@ import "./style.css";
     bgmStarted = true;
     resetGame();
     playGameBgm();
+
+    // Dramatic START announcement
+    const announce = $("startAnnounce");
+    announce.classList.add("show");
+    setTimeout(() => {
+      announce.classList.remove("show");
+    }, 1200);
   });
 
   function snapshotBoards() {
