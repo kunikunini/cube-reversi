@@ -675,8 +675,6 @@
   const EMPTY = 0, P1 = 1, P2 = 2;
   const TIME_PER_PLAYER = 3 * 60; // seconds
 
-  // 3D transform for each face (translateZ = half cube size handled by a CSS var)
-  // We put the faces using classic CSS cube layout. stageSize drives size.
   const FACE_TRANSFORMS = {
     front:  "rotateY(  0deg) translateZ(var(--half))",
     back:   "rotateY(180deg) translateZ(var(--half))",
@@ -686,21 +684,19 @@
     bottom: "rotateX(-90deg) translateZ(var(--half))",
   };
 
-  // Reversi 8 directions
   const DIRS = [
     [-1,-1],[-1,0],[-1,1],
     [ 0,-1],       [ 0,1],
     [ 1,-1],[ 1,0],[ 1,1],
   ];
 
-  // -------------- State --------------
   const state = {
-    boards: {},        // {face: number[3][3]}
+    boards: {},
     turn: P1,
     times: { 1: TIME_PER_PLAYER, 2: TIME_PER_PLAYER },
     timerId: null,
     lastTick: 0,
-    rotX: -22,         // current cube rotation (deg)
+    rotX: -22,
     rotY: -28,
     dragStartX: 0,
     dragStartY: 0,
@@ -712,7 +708,6 @@
     muted: false,
   };
 
-  // -------------- DOM --------------
   const $ = (id) => document.getElementById(id);
   const cubeEl = $("cube");
   const stageEl = $("stage");
@@ -726,25 +721,21 @@
   const toastEl = $("toast");
   const faceTabsEl = $("faceTabs");
 
-  // -------------- Init boards --------------
   function makeEmptyBoard() {
     return [[0,0,0],[0,0,0],[0,0,0]];
   }
   function resetBoards() {
     state.boards = {};
     for (const f of FACES) state.boards[f] = makeEmptyBoard();
-    // Seed only the FRONT face with a classic 2x2 reversi opening
-    // in the top-left quadrant. Other faces start empty; players
-    // can expand to them once stones reach adjacent edges.
-    const b = state.boards["front"];
-    b[0][0] = P1; b[0][1] = P2;
-    b[1][0] = P2; b[1][1] = P1;
+    for (const f of FACES) {
+      const b = state.boards[f];
+      b[0][0] = P1; b[0][2] = P2;
+      b[2][0] = P2; b[2][2] = P1;
+    }
   }
 
-  // -------------- Build cube DOM --------------
   function buildCube() {
     cubeEl.innerHTML = "";
-    let cellNumber = 1;
     for (const f of FACES) {
       const face = document.createElement("div");
       face.className = "face";
@@ -766,10 +757,7 @@
           cell.dataset.face = f;
           cell.dataset.r = r;
           cell.dataset.c = c;
-          const num = document.createElement("span");
-          num.className = "cell-num";
-          num.textContent = String(cellNumber++);
-          cell.appendChild(num);
+          cell.addEventListener("click", onCellClick);
           inner.appendChild(cell);
         }
       }
@@ -780,14 +768,11 @@
   }
 
   function sizeCube() {
-    // half of face size = translateZ distance
-    // Face is 72% of stage; so half = 36% of stage width
     const size = stageEl.getBoundingClientRect().width;
     cubeEl.style.setProperty("--half", `${size * 0.36}px`);
   }
   window.addEventListener("resize", sizeCube);
 
-  // -------------- Face tabs --------------
   function buildFaceTabs() {
     faceTabsEl.innerHTML = "";
     const labels = [
@@ -830,9 +815,7 @@
     });
   }
 
-  // return the face currently nearest to viewer given rotation
   function closestFace() {
-    // face normals in cube-local space:
     const normals = {
       front:  [ 0, 0, 1],
       back:   [ 0, 0,-1],
@@ -841,19 +824,14 @@
       top:    [ 0,-1, 0],
       bottom: [ 0, 1, 0],
     };
-    // Apply rotation X then rotation Y (matching CSS: rotateX then rotateY, we use rotateY then rotateX)
-    // Our transform is: rotateX(rotX) rotateY(rotY); camera at +Z.
-    // To see which face's normal has largest +Z after transform:
     const rx = state.rotX * Math.PI / 180;
     const ry = state.rotY * Math.PI / 180;
     function rotate(v) {
       let [x,y,z] = v;
-      // rotateY: (x,z) around y
       const cy = Math.cos(ry), sy = Math.sin(ry);
       const x1 = x*cy + z*sy;
       const z1 = -x*sy + z*cy;
       x = x1; z = z1;
-      // rotateX: (y,z) around x
       const cx = Math.cos(rx), sx = Math.sin(rx);
       const y1 = y*cx - z*sx;
       const z2 = y*sx + z*cx;
@@ -868,7 +846,6 @@
     return best;
   }
 
-  // -------------- Rotation --------------
   function applyRotation(smooth = false) {
     if (smooth) cubeEl.classList.remove("dragging");
     else cubeEl.classList.add("dragging");
@@ -876,18 +853,13 @@
     updateActiveTab();
   }
 
-  // Drag / swipe rotation
   stageEl.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".cell")) {
-      // allow cell click — but also start potential drag.
-      // We'll only start drag on movement > threshold.
-    }
     state.dragStartX = e.clientX;
     state.dragStartY = e.clientY;
     state.dragStartRotX = state.rotX;
     state.dragStartRotY = state.rotY;
-    state.pointerDownCell = e.target.closest(".cell");
     state.dragging = false;
+    stageEl.setPointerCapture(e.pointerId);
   });
   stageEl.addEventListener("pointermove", (e) => {
     if (!e.buttons && e.pointerType === "mouse") return;
@@ -904,26 +876,17 @@
     }
   });
   function endDrag(e) {
-    const wasDrag = state.dragging;
     if (state.dragging) {
       state.dragging = false;
       cubeEl.classList.remove("dragging");
       updateActiveTab();
     }
-    // If it wasn't a drag, treat as a tap on the cell under pointerdown
-    if (!wasDrag && state.pointerDownCell && e.type === "pointerup") {
-      const cell = state.pointerDownCell;
-      const up = e.target.closest(".cell");
-      if (up === cell) handleCellTap(cell);
-    }
-    state.pointerDownCell = null;
   }
   stageEl.addEventListener("pointerup", endDrag);
   stageEl.addEventListener("pointercancel", endDrag);
 
   function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
 
-  // Rotate buttons
   document.querySelectorAll(".rotate-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const dir = btn.dataset.rot;
@@ -932,168 +895,36 @@
       if (dir === "right") state.rotY += step;
       if (dir === "up")    state.rotX = clamp(state.rotX + step, -85, 85);
       if (dir === "down")  state.rotX = clamp(state.rotX - step, -85, 85);
-      // If we rotated past limits on X, wrap back
       applyRotation(true);
     });
   });
 
-  // -------------- Reversi rules (cross-face) --------------
   function opposite(p) { return p === P1 ? P2 : P1; }
 
-  // Build a global cell graph. Each cell has a 3D position on the
-  // cube surface. Neighbors = any cell within a distance threshold.
-  // Line-walking: given a "direction" vector, step by finding the
-  // neighbor whose relative position best matches the direction;
-  // after each step the direction is recomputed from the previous
-  // cell, so the walk naturally bends across cube edges.
-  // Cube coords: each face is a 3x3 grid, cell size = 2/3, face
-  // size = 2 (half-extent = 1).
-  const CELL_S = 2 / 3;
-  // Face basis: for each face, u = right direction in 3D, v = down,
-  // n = outward normal. So 3D pos of cell (r,c) on face =
-  //   n * 1 + u * ((c - 1) * CELL_S) + v * ((r - 1) * CELL_S)
-  const FACE_BASIS = {
-    // front (+Z): right = +X, down = -Y
-    front:  { n: [0,0, 1], u: [ 1, 0, 0], v: [0,-1, 0] },
-    // back  (-Z): right = -X, down = -Y
-    back:   { n: [0,0,-1], u: [-1, 0, 0], v: [0,-1, 0] },
-    // right (+X): right = -Z, down = -Y
-    right:  { n: [ 1,0,0], u: [ 0, 0,-1], v: [0,-1, 0] },
-    // left  (-X): right = +Z, down = -Y
-    left:   { n: [-1,0,0], u: [ 0, 0, 1], v: [0,-1, 0] },
-    // top   (+Y normal points up but CSS rotateX(90) shows top): right = +X, down = +Z
-    top:    { n: [0, 1,0], u: [ 1, 0, 0], v: [0, 0, 1] },
-    // bottom(-Y): right = +X, down = -Z
-    bottom: { n: [0,-1,0], u: [ 1, 0, 0], v: [0, 0,-1] },
-  };
-
-  function cellPos3D(face, r, c) {
-    const b = FACE_BASIS[face];
-    const out = [0,0,0];
-    for (let i = 0; i < 3; i++) {
-      out[i] = b.n[i] + b.u[i] * ((c - 1) * CELL_S) + b.v[i] * ((r - 1) * CELL_S);
-    }
-    return out;
-  }
-  function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
-  function len(a){return Math.hypot(a[0],a[1],a[2]);}
-  function norm(a){const l=len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];}
-  function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
-
-  // Build every cell's list of neighbors (face,r,c) with a direction
-  // vector from this cell to that cell.
-  let CELLS = []; // flat list: {id, face, r, c, pos, number}
-  let NEIGHBORS = {}; // key `face:r:c` -> [{key, dir(normalized), dist}]
-  const KEY = (f,r,c) => `${f}:${r}:${c}`;
-
-  function buildCellGraph() {
-    CELLS = [];
-    let idx = 0;
-    for (const f of FACES) {
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          CELLS.push({ id: idx, number: idx + 1, face: f, r, c, pos: cellPos3D(f, r, c) });
-          idx++;
-        }
+  function flipsFor(board, r, c, player) {
+    if (board[r][c] !== EMPTY) return [];
+    const flips = [];
+    for (const [dr, dc] of DIRS) {
+      let i = r + dr, j = c + dc;
+      const line = [];
+      while (i >= 0 && i < 3 && j >= 0 && j < 3 && board[i][j] === opposite(player)) {
+        line.push([i, j]);
+        i += dr; j += dc;
+      }
+      if (line.length && i >= 0 && i < 3 && j >= 0 && j < 3 && board[i][j] === player) {
+        flips.push(...line);
       }
     }
-    // Neighbor threshold: slightly larger than the diagonal of one
-    // cell (CELL_S * sqrt(2) ~= 0.943), but smaller than 2 cells.
-    const THRESH = CELL_S * 1.7;
-    NEIGHBORS = {};
-    for (const a of CELLS) {
-      const neigh = [];
-      for (const b of CELLS) {
-        if (a === b) continue;
-        const d = sub(b.pos, a.pos);
-        const dist = len(d);
-        if (dist < THRESH) {
-          neigh.push({ key: KEY(b.face,b.r,b.c), face:b.face, r:b.r, c:b.c, dir: norm(d), dist });
-        }
-      }
-      NEIGHBORS[KEY(a.face,a.r,a.c)] = neigh;
-    }
-  }
-
-  function getCell(face,r,c) {
-    return state.boards[face][r][c];
-  }
-  function setCell(face,r,c,v) {
-    state.boards[face][r][c] = v;
-  }
-
-  // Walk from (face,r,c) in direction dir (3D unit vec), with the
-  // previous cell's position for perpendicular-distance scoring.
-  // Returns the neighbor cell that best continues the line, OR null.
-  function stepInDir(face, r, c, dir) {
-    const neigh = NEIGHBORS[KEY(face,r,c)];
-    const here = cellPos3D(face, r, c);
-    let best = null, bestScore = -Infinity;
-    for (const n of neigh) {
-      const d = dot(n.dir, dir);
-      if (d < 0.5) continue; // must be in the general forward direction
-      // Perpendicular distance from ray: small is good. Combine with
-      // alignment: prefer most aligned, tiebreak by nearer.
-      const score = d - n.dist * 0.05;
-      if (score > bestScore) { bestScore = score; best = n; }
-    }
-    return best;
-  }
-
-  // Project v onto plane with normal n (remove component along n).
-  function projectTangent(v, n) {
-    const d = dot(v, n);
-    return norm([v[0] - n[0]*d, v[1] - n[1]*d, v[2] - n[2]*d]);
-  }
-
-  function flipsForCell(face, r, c, player) {
-    if (getCell(face,r,c) !== EMPTY) return [];
-    const opp = opposite(player);
-    const start = cellPos3D(face, r, c);
-    const allFlips = [];
-    const neigh = NEIGHBORS[KEY(face,r,c)];
-    // For each neighbor direction, walk along that direction.
-    for (const n0 of neigh) {
-      if (getCell(n0.face, n0.r, n0.c) !== opp) continue;
-      // Walk - tangent-project onto starting face for initial dir
-      const line = [{face:n0.face, r:n0.r, c:n0.c}];
-      let cur = n0;
-      let curDir = projectTangent(n0.dir, FACE_BASIS[n0.face].n);
-      let found = false;
-      let safety = 30;
-      while (safety-- > 0) {
-        const nxt = stepInDir(cur.face, cur.r, cur.c, curDir);
-        if (!nxt) break;
-        const v = getCell(nxt.face, nxt.r, nxt.c);
-        if (v === opp) {
-          line.push({face:nxt.face, r:nxt.r, c:nxt.c});
-          // Re-project direction onto the new face's tangent plane
-          curDir = projectTangent(nxt.dir, FACE_BASIS[nxt.face].n);
-          cur = nxt;
-        } else if (v === player) {
-          found = true;
-          break;
-        } else {
-          break;
-        }
-      }
-      if (found) allFlips.push(...line);
-    }
-    // Dedupe
-    const seen = new Set();
-    return allFlips.filter(f => {
-      const k = KEY(f.face,f.r,f.c);
-      if (seen.has(k)) return false;
-      seen.add(k); return true;
-    });
+    return flips;
   }
 
   function legalMovesOnFace(face, player) {
+    const b = state.boards[face];
     const moves = [];
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
-        if (getCell(face,r,c) !== EMPTY) continue;
-        const f = flipsForCell(face, r, c, player);
+        if (b[r][c] !== EMPTY) continue;
+        const f = flipsFor(b, r, c, player);
         if (f.length) moves.push({ r, c, flips: f });
       }
     }
@@ -1108,14 +939,14 @@
   }
 
   function applyMove(face, r, c, player) {
-    const flips = flipsForCell(face, r, c, player);
+    const b = state.boards[face];
+    const flips = flipsFor(b, r, c, player);
     if (!flips.length) return null;
-    setCell(face, r, c, player);
-    for (const f of flips) setCell(f.face, f.r, f.c, player);
+    b[r][c] = player;
+    for (const [i, j] of flips) b[i][j] = player;
     return flips;
   }
 
-  // -------------- Rendering --------------
   function render() {
     for (const face of FACES) {
       const b = state.boards[face];
@@ -1126,8 +957,6 @@
         const r = +cell.dataset.r, c = +cell.dataset.c;
         const v = b[r][c];
         cell.classList.toggle("hint", state.turn === P1 && legalSet.has(r*3+c));
-        cell.classList.toggle("has-stone", v !== EMPTY);
-        // Keep stone if already present, else update
         const existing = cell.querySelector(".stone");
         if (v === EMPTY) {
           if (existing) existing.remove();
@@ -1158,7 +987,6 @@
     return { s1, s2 };
   }
 
-  // -------------- Turn flow --------------
   function setTurn(p, reason = "") {
     state.turn = p;
     p1PanelEl.classList.toggle("active", p === P1);
@@ -1170,7 +998,6 @@
 
     if (state.gameOver) return;
 
-    // Check legal moves
     if (!anyLegalMoves(P1) && !anyLegalMoves(P2)) {
       endGame();
       return;
@@ -1187,21 +1014,21 @@
     }
   }
 
-  function handleCellTap(cell) {
+  function onCellClick(e) {
     if (state.gameOver) return;
     if (state.turn !== P1) return;
+    if (state.dragging) return;
+    const cell = e.currentTarget;
     const face = cell.dataset.face;
     const r = +cell.dataset.r, c = +cell.dataset.c;
-    // Check move legality directly. If not legal but face isn't
-    // currently facing the camera, snap to it so the user can see.
+    if (face !== closestFace()) {
+      showToast(`${FACE_LABEL[face]} に回転`);
+      snapToFace(face);
+      return;
+    }
     const flips = applyMove(face, r, c, P1);
     if (!flips) {
-      if (face !== closestFace()) {
-        snapToFace(face);
-        showToast(`${FACE_LABEL[face]} に回転`);
-      } else {
-        showToast("置けません");
-      }
+      showToast("置けません");
       return;
     }
     playSound("place");
@@ -1210,8 +1037,6 @@
     setTurn(P2);
   }
 
-  // -------------- AI --------------
-  // Corner > edge > center preference. Simple but decent on 3x3.
   const WEIGHT = [
     [ 8, 2, 8],
     [ 2, 4, 2],
@@ -1220,7 +1045,6 @@
 
   function aiMove() {
     if (state.gameOver) return;
-    // Rotate cube to the face AI picks so the user can see it.
     let best = null;
     for (const f of FACES) {
       for (const m of legalMovesOnFace(f, P2)) {
@@ -1244,7 +1068,6 @@
     }, 550);
   }
 
-  // -------------- Timer --------------
   function startTimer() {
     stopTimer();
     state.lastTick = performance.now();
@@ -1279,7 +1102,6 @@
     p2TimerEl.classList.toggle("low", state.times[P2] < 30);
   }
 
-  // -------------- End game --------------
   function endGame(winner = null, reason = "") {
     state.gameOver = true;
     stopTimer();
@@ -1296,7 +1118,6 @@
     render();
   }
 
-  // -------------- Toast / sound --------------
   let toastTimer = null;
   function showToast(msg) {
     toastEl.textContent = msg;
@@ -1331,7 +1152,6 @@
     } catch (e) {}
   }
 
-  // -------------- Actions --------------
   $("resetBtn").addEventListener("click", () => {
     if (confirm("ゲームをリセットしますか？")) resetGame();
   });
@@ -1344,9 +1164,6 @@
     setTurn(P2);
   });
   $("nextBtn").addEventListener("click", () => {
-    // NEXT = end your turn early if you have no move, or skip AI wait visually.
-    // For clarity, NEXT is "手番終了/次のプレイヤー" — basically PASS if no moves;
-    // otherwise it's the same as confirming your move (no-op since moves auto-end turn).
     if (state.gameOver) return;
     if (state.turn === P1) {
       if (anyLegalMoves(P1)) showToast("光るマスをタップしてください");
@@ -1383,20 +1200,16 @@
     setTurn(P1);
   }
 
-  // -------------- Boot --------------
   function boot() {
-    buildCellGraph();
     buildFaceTabs();
     buildCube();
     resetBoards();
     applyRotation(true);
     render();
     updateTimers();
-    // tutorial starts game on click
   }
   boot();
 })();
-
 </script>
 </body>
 </html>
