@@ -683,6 +683,9 @@
 
 <div class="toast" id="toast"></div>
 
+<audio id="titleBgm" src="title_bgm.mp3" loop preload="auto"></audio>
+<audio id="gameBgm"  src="game_bgm.mp3"  loop preload="auto"></audio>
+
 <script>
 /* =============================================================
    NEO REVERSI — logic
@@ -1297,6 +1300,38 @@
   }
 
   let audioCtx = null;
+  // --- BGM ---
+  const titleBgm = $("titleBgm");
+  const gameBgm  = $("gameBgm");
+  let bgmStarted = false; // becomes true after first user interaction
+
+  function applyMuteToBgm() {
+    titleBgm.muted = state.muted;
+    gameBgm.muted  = state.muted;
+  }
+
+  function playTitleBgm() {
+    gameBgm.pause(); gameBgm.currentTime = 0;
+    if (!state.muted) titleBgm.play().catch(() => {});
+    else titleBgm.load();
+  }
+
+  function playGameBgm() {
+    titleBgm.pause(); titleBgm.currentTime = 0;
+    if (!state.muted) gameBgm.play().catch(() => {});
+    else gameBgm.load();
+  }
+
+  // start title BGM on first user interaction (mobile autoplay restriction)
+  function onFirstInteraction() {
+    if (bgmStarted) return;
+    bgmStarted = true;
+    // タイトル画面が表示中なら title BGM を開始
+    if (!$("tut").classList.contains("hidden")) playTitleBgm();
+    document.removeEventListener("pointerdown", onFirstInteraction);
+  }
+  document.addEventListener("pointerdown", onFirstInteraction);
+
   function playSound(kind) {
     if (state.muted) return;
     try {
@@ -1359,6 +1394,7 @@
   $("playAgainBtn").addEventListener("click", () => {
     overlayEl.classList.remove("open");
     resetGame();
+    playGameBgm();
   });
   $("reviewBtn").addEventListener("click", () => {
     overlayEl.classList.remove("open");
@@ -1366,6 +1402,7 @@
   $("toTitleBtn").addEventListener("click", () => {
     overlayEl.classList.remove("open");
     $("tut").classList.remove("hidden");
+    playTitleBgm();
   });
   $("helpBtn").addEventListener("click", () => {
     $("tut").classList.remove("hidden");
@@ -1374,6 +1411,12 @@
     state.muted = !state.muted;
     $("muteBtn").textContent = state.muted ? "♪̸" : "♪";
     $("muteBtn").style.opacity = state.muted ? "0.5" : "1";
+    applyMuteToBgm();
+    if (!state.muted) {
+      // ミュート解除時に適切なBGMを再開
+      if ($("tut").classList.contains("hidden")) gameBgm.play().catch(() => {});
+      else titleBgm.play().catch(() => {});
+    }
   });
   document.querySelectorAll(".diff-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1385,7 +1428,9 @@
 
   $("startBtn").addEventListener("click", () => {
     $("tut").classList.add("hidden");
+    bgmStarted = true; // タップ済みなので確実に再生可
     resetGame();
+    playGameBgm();
   });
 
   function snapshotBoards() {
