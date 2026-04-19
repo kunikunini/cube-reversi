@@ -735,6 +735,7 @@
 
   function buildCube() {
     cubeEl.innerHTML = "";
+    let cellNumber = 1;
     for (const f of FACES) {
       const face = document.createElement("div");
       face.className = "face";
@@ -756,6 +757,10 @@
           cell.dataset.face = f;
           cell.dataset.r = r;
           cell.dataset.c = c;
+          const num = document.createElement("span");
+          num.className = "cell-num";
+          num.textContent = cellNumber++;
+          cell.appendChild(num);
           cell.addEventListener("click", onCellClick);
           inner.appendChild(cell);
         }
@@ -1037,6 +1042,7 @@
         const r = +cell.dataset.r, c = +cell.dataset.c;
         const v = b[r][c];
         cell.classList.toggle("hint", state.turn === P1 && legalSet.has(r*3+c));
+        cell.classList.toggle("has-stone", v !== EMPTY);
         const existing = cell.querySelector(".stone");
         if (v === EMPTY) {
           if (existing) existing.remove();
