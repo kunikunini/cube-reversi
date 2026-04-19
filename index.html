@@ -270,17 +270,17 @@
   .cell:active { transform: scale(0.96); }
   .cell.hint {
     background:
-      radial-gradient(circle at 50% 50%, rgba(var(--tint), 0.18), rgba(var(--tint), 0.02) 60%),
+      radial-gradient(circle at 50% 50%, rgba(40, 243, 255, 0.18), rgba(40, 243, 255, 0.02) 60%),
       rgba(0, 0, 0, 0.35);
     box-shadow:
-      inset 0 0 0 1px rgba(var(--tint), 0.7),
-      inset 0 0 12px rgba(var(--tint), 0.35);
+      inset 0 0 0 1px rgba(40, 243, 255, 0.7),
+      inset 0 0 12px rgba(40, 243, 255, 0.35);
   }
   .cell.hint::after {
     content: "";
     width: 22%; height: 22%; border-radius: 50%;
-    background: rgba(var(--tint), 0.9);
-    box-shadow: 0 0 10px rgba(var(--tint), 0.9);
+    background: rgba(40, 243, 255, 0.9);
+    box-shadow: 0 0 10px rgba(40, 243, 255, 0.9);
     animation: hintPulse 1.4s ease-in-out infinite;
   }
   @keyframes hintPulse {
@@ -624,6 +624,7 @@
       <div class="p1"><span class="num" id="finalP1">0</span>YOU</div>
       <div class="p2"><span class="num" id="finalP2">0</span>AI</div>
     </div>
+    <div id="finalTotal" style="font-size:10px;letter-spacing:0.15em;color:var(--muted);margin-bottom:12px;"></div>
     <button class="big-btn" id="playAgainBtn">PLAY AGAIN</button>
   </div>
 </div>
@@ -1200,6 +1201,7 @@
     outcomeText.className = "big " + (outcome === "YOU WIN" ? "win" : outcome === "YOU LOSE" ? "lose" : "draw");
     finalP1.textContent = s1;
     finalP2.textContent = s2;
+    $("finalTotal").textContent = `${s1 + s2} / 54 CELLS FILLED`;
     overlayEl.classList.add("open");
     render();
   }
