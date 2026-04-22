@@ -285,7 +285,7 @@ import "./style.css";
       state.lastMouseX = e.clientX;
       state.lastMouseY = e.clientY;
 
-      if (!state.dragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      if (!state.dragging && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) {
         state.dragging = true;
         cubeEl.classList.add("dragging");
         try { stageEl.setPointerCapture(e.pointerId); } catch (err) {}
