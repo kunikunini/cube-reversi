@@ -133,7 +133,6 @@ import "./style.css";
           num.className = "cell-num";
           num.textContent = cellNumber++;
           cell.appendChild(num);
-          cell.addEventListener("click", onCellClick);
           inner.appendChild(cell);
         }
       }
@@ -300,12 +299,20 @@ import "./style.css";
   });
 
   function endDrag(e) {
+    const wasDrag = state.dragging;
     state.pointers.delete(e.pointerId);
     if (state.pointers.size === 0) {
-      if (state.dragging) {
-        setTimeout(() => { state.dragging = false; }, 50);
+      if (wasDrag) {
+        state.dragging = false;
         state.isInertia = true;
         cubeEl.classList.remove("dragging");
+      } else {
+        // Tap detected — find cell under pointer via elementFromPoint
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        if (el) {
+          const cell = el.closest(".cell");
+          if (cell) handleCellTap(cell);
+        }
       }
       state.initialDist = 0;
     } else {
@@ -319,7 +326,7 @@ import "./style.css";
       state.dragStartRotY = state.rotY;
       state.initialDist = 0;
       if (state.pointers.size === 1) {
-        state.dragging = false; // Reset drag state for new finger
+        state.dragging = false;
       }
     }
   }
@@ -597,11 +604,9 @@ import "./style.css";
     }
   }
 
-  function onCellClick(e) {
+  function handleCellTap(cell) {
     if (state.gameOver) return;
     if (state.turn !== P1) return;
-    if (state.dragging) return;
-    const cell = e.currentTarget;
     const face = cell.dataset.face;
     const r = +cell.dataset.r,
       c = +cell.dataset.c;
