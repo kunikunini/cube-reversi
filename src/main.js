@@ -816,16 +816,25 @@ import "./style.css";
 
   function onFirstInteraction() {
     initAudio();
-    ["pointerdown", "click", "keydown", "touchstart"].forEach((e) =>
+    ["pointerup", "touchend", "click", "keydown"].forEach((e) =>
       document.removeEventListener(e, onFirstInteraction)
     );
     if (bgmStarted) return;
     bgmStarted = true;
     if (!$("tut").classList.contains("hidden")) playTitleBgm();
   }
-  ["pointerdown", "click", "keydown", "touchstart"].forEach((e) =>
+  ["pointerup", "touchend", "click", "keydown"].forEach((e) =>
     document.addEventListener(e, onFirstInteraction, { passive: true })
   );
+
+  // Resilient audio unlocker for Safari
+  ["click", "touchend"].forEach(evt => {
+    document.addEventListener(evt, () => {
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+    }, { passive: true });
+  });
 
   function playSound(kind) {
     if (state.muted) return;
