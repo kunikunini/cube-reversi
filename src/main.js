@@ -258,7 +258,6 @@ import "./style.css";
       state.initialScale = state.scale;
       state.dragging = false; // Stop rotation when second finger added
     }
-    stageEl.setPointerCapture(e.pointerId);
   });
 
   stageEl.addEventListener("pointermove", (e) => {
@@ -289,6 +288,7 @@ import "./style.css";
       if (!state.dragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
         state.dragging = true;
         cubeEl.classList.add("dragging");
+        try { stageEl.setPointerCapture(e.pointerId); } catch (err) {}
       }
       if (state.dragging) {
         state.rotY = state.dragStartRotY + dx * 0.5;
@@ -302,7 +302,7 @@ import "./style.css";
     state.pointers.delete(e.pointerId);
     if (state.pointers.size === 0) {
       if (state.dragging) {
-        state.dragging = false;
+        setTimeout(() => { state.dragging = false; }, 50);
         state.isInertia = true;
         cubeEl.classList.remove("dragging");
       }
@@ -779,13 +779,17 @@ import "./style.css";
   let bgmStarted = false;
 
   function initAudio() {
-    if (audioCtx) return;
+    if (audioCtx) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return;
+    }
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     bgmGain = audioCtx.createGain();
     bgmGain.gain.value = 0.04; // Very quiet
     bgmGain.connect(audioCtx.destination);
     bgmSource = audioCtx.createMediaElementSource(bgm);
     bgmSource.connect(bgmGain);
+    if (audioCtx.state === "suspended") audioCtx.resume();
   }
 
   function playTitleBgm() {
@@ -812,12 +816,16 @@ import "./style.css";
 
   function onFirstInteraction() {
     initAudio();
+    ["pointerdown", "click", "keydown", "touchstart"].forEach((e) =>
+      document.removeEventListener(e, onFirstInteraction)
+    );
     if (bgmStarted) return;
     bgmStarted = true;
     if (!$("tut").classList.contains("hidden")) playTitleBgm();
-    document.removeEventListener("pointerdown", onFirstInteraction);
   }
-  document.addEventListener("pointerdown", onFirstInteraction);
+  ["pointerdown", "click", "keydown", "touchstart"].forEach((e) =>
+    document.addEventListener(e, onFirstInteraction, { passive: true })
+  );
 
   function playSound(kind) {
     if (state.muted) return;
