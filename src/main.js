@@ -839,23 +839,10 @@ import "./style.css";
   );
 
   // --- Launcher Logic ---
-  // Try to ensure video plays (some mobile browsers block even muted autoplay)
-  const launcherVideo = $("launcherVideo");
-  if (launcherVideo) {
-    launcherVideo.play().catch(() => {});
-    // Retry on first touch
-    document.addEventListener("touchstart", function retryVideo() {
-      if (launcherVideo) launcherVideo.play().catch(() => {});
-      document.removeEventListener("touchstart", retryVideo);
-    }, { once: true, passive: true });
-  }
-
   if (launcherEl) {
     launcherEl.addEventListener("click", () => {
       console.log("Launcher clicked");
       launcherEl.classList.add("hidden");
-      
-      if (launcherVideo) launcherVideo.pause();
       
       initAudio();
       if (!bgmStarted) {
