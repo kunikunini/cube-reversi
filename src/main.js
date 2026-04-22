@@ -814,13 +814,18 @@ import "./style.css";
     bgm.pause();
   }
 
-  function onFirstInteraction() {
+  function onFirstInteraction(e) {
     initAudio();
-    ["pointerup", "touchend", "click", "keydown"].forEach((e) =>
-      document.removeEventListener(e, onFirstInteraction)
+    ["pointerup", "touchend", "click", "keydown"].forEach((evt) =>
+      document.removeEventListener(evt, onFirstInteraction)
     );
     if (bgmStarted) return;
     bgmStarted = true;
+    
+    if (e && e.target && e.target.closest && e.target.closest("#startBtn")) {
+      return;
+    }
+    
     if (!$("tut").classList.contains("hidden")) playTitleBgm();
   }
   ["pointerup", "touchend", "click", "keydown"].forEach((e) =>
