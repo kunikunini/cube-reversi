@@ -994,6 +994,8 @@ import "./style.css";
     applyRotation(true);
     render();
     updateTimers();
+    // Try to autoplay BGM if the browser allows it
+    playTitleBgm();
   }
   boot();
 })();
