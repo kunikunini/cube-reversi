@@ -839,13 +839,23 @@ import "./style.css";
   );
 
   // --- Launcher Logic ---
+  // Try to ensure video plays (some mobile browsers block even muted autoplay)
+  const launcherVideo = $("launcherVideo");
+  if (launcherVideo) {
+    launcherVideo.play().catch(() => {});
+    // Retry on first touch
+    document.addEventListener("touchstart", function retryVideo() {
+      if (launcherVideo) launcherVideo.play().catch(() => {});
+      document.removeEventListener("touchstart", retryVideo);
+    }, { once: true, passive: true });
+  }
+
   launcherEl.addEventListener("click", () => {
     // Hide launcher
     launcherEl.classList.add("hidden");
     
     // Pause video to save CPU
-    const v = $("launcherVideo");
-    if (v) v.pause();
+    if (launcherVideo) launcherVideo.pause();
     
     // Unlock and play
     initAudio();

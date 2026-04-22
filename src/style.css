@@ -819,12 +819,12 @@ body {
   100% { transform: scale(1.1); opacity: 0.8; }
 }
 
-/* もし動画を使う場合のスタイル */
+/* 背景動画のスタイル */
 .launcher-bg video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .launcher-content {
