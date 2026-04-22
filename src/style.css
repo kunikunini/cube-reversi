@@ -841,12 +841,12 @@ body {
   object-fit: cover;
   opacity: 0;
   filter: brightness(0.7) contrast(1.1);
-  transition: opacity 2s ease-in-out;
+  transition: opacity 3s ease-in-out; /* フェードをよりゆったり（3秒）に */
+  animation: bg-zoom 20s ease-in-out infinite alternate; /* 常に同期してズーム */
 }
 
 .launcher-img.active {
   opacity: 0.8;
-  animation: bg-zoom 20s ease-in-out infinite alternate;
 }
 
 @keyframes bg-zoom {
