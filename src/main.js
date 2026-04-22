@@ -611,10 +611,9 @@ import "./style.css";
     const r = +cell.dataset.r,
       c = +cell.dataset.c;
     if (face !== closestFace()) {
-      showToast(`${FACE_LABEL[face]} に回転`);
       snapToFace(face);
-      return;
     }
+    
     const snapshot = snapshotBoards();
     const flips = applyMove(face, r, c, P1);
     if (!flips) {
