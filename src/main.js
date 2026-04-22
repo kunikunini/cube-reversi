@@ -840,8 +840,22 @@ import "./style.css";
 
   // --- Launcher Logic ---
   if (launcherEl) {
+    // --- Slideshow Logic ---
+    let currentImgIndex = 0;
+    const launcherImages = launcherEl.querySelectorAll(".launcher-img");
+    const slideInterval = setInterval(() => {
+      if (launcherEl.classList.contains("hidden")) {
+        clearInterval(slideInterval);
+        return;
+      }
+      launcherImages[currentImgIndex].classList.remove("active");
+      currentImgIndex = (currentImgIndex + 1) % launcherImages.length;
+      launcherImages[currentImgIndex].classList.add("active");
+    }, 5000); // 5秒ごとに切り替え
+
     launcherEl.addEventListener("click", () => {
       console.log("Launcher clicked");
+      clearInterval(slideInterval);
       launcherEl.classList.add("hidden");
       
       initAudio();
