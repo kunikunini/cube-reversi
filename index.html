@@ -28,8 +28,9 @@
     <!-- Launcher / Tap to Start -->
     <div id="launcher" class="launcher">
       <div class="launcher-bg">
-        <!-- 動画を設定したい場合はここを <video> タグに差し替えます -->
-        <div class="launcher-visual"></div>
+        <video autoplay muted loop playsinline id="launcherVideo">
+          <source src="/movie.mp4" type="video/mp4">
+        </video>
       </div>
       <div class="launcher-content">
         <div class="launcher-logo">◆ NEO-REVERSI</div>

@@ -838,6 +838,10 @@ import "./style.css";
     // Hide launcher
     launcherEl.classList.add("hidden");
     
+    // Pause video to save CPU
+    const v = $("launcherVideo");
+    if (v) v.pause();
+    
     // Unlock and play
     initAudio();
     if (!bgmStarted) {
