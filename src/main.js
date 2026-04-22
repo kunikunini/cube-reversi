@@ -850,22 +850,24 @@ import "./style.css";
     }, { once: true, passive: true });
   }
 
-  launcherEl.addEventListener("click", () => {
-    // Hide launcher
-    launcherEl.classList.add("hidden");
-    
-    // Pause video to save CPU
-    if (launcherVideo) launcherVideo.pause();
-    
-    // Unlock and play
-    initAudio();
-    if (!bgmStarted) {
-      bgmStarted = true;
-      if (!$("tut").classList.contains("hidden")) {
-        playTitleBgm();
+  if (launcherEl) {
+    launcherEl.addEventListener("click", () => {
+      console.log("Launcher clicked");
+      launcherEl.classList.add("hidden");
+      
+      if (launcherVideo) launcherVideo.pause();
+      
+      initAudio();
+      if (!bgmStarted) {
+        bgmStarted = true;
+        if (!$("tut").classList.contains("hidden")) {
+          playTitleBgm();
+        }
       }
-    }
-  }, { once: true });
+    }, { once: true });
+  } else {
+    console.warn("Launcher element not found");
+  }
 
   // Resilient audio unlocker for Safari
   ["click", "touchend"].forEach(evt => {

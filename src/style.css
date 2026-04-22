@@ -32,6 +32,7 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  height: 100vh;
   height: 100svh;
   width: 100vw;
   overscroll-behavior: none;
@@ -699,7 +700,10 @@ body {
 /* === Overlay (modal) === */
 .overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(3, 5, 12, 0.82);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -784,7 +788,10 @@ body {
 /* === Launcher === */
 .launcher {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 9999;
   background: var(--bg-0);
   display: flex;
@@ -802,7 +809,10 @@ body {
 
 .launcher-bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 1;
 }
 
@@ -864,7 +874,10 @@ body {
 /* Tutorial overlay */
 .tut {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 60;
   background: rgba(3, 5, 12, 0.94);
   display: flex;
