@@ -71,6 +71,7 @@ import "./style.css";
   };
 
   const $ = (id) => document.getElementById(id);
+  const launcherEl = $("launcher");
   const cubeEl = $("cube");
   const stageEl = $("stage");
   const statusEl = $("status");
@@ -832,6 +833,21 @@ import "./style.css";
     document.addEventListener(e, onFirstInteraction, { passive: true })
   );
 
+  // --- Launcher Logic ---
+  launcherEl.addEventListener("click", () => {
+    // Hide launcher
+    launcherEl.classList.add("hidden");
+    
+    // Unlock and play
+    initAudio();
+    if (!bgmStarted) {
+      bgmStarted = true;
+      if (!$("tut").classList.contains("hidden")) {
+        playTitleBgm();
+      }
+    }
+  }, { once: true });
+
   // Resilient audio unlocker for Safari
   ["click", "touchend"].forEach(evt => {
     document.addEventListener(evt, () => {
@@ -994,8 +1010,6 @@ import "./style.css";
     applyRotation(true);
     render();
     updateTimers();
-    // Try to autoplay BGM if the browser allows it
-    playTitleBgm();
   }
   boot();
 })();

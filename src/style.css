@@ -781,6 +781,86 @@ body {
   color: var(--magenta);
 }
 
+/* === Launcher === */
+.launcher {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+}
+
+.launcher.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.launcher-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.launcher-visual {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(40, 243, 255, 0.15), transparent 70%),
+    linear-gradient(45deg, rgba(255, 62, 165, 0.05) 0%, transparent 100%);
+  animation: bg-pulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes bg-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* もし動画を使う場合のスタイル */
+.launcher-bg video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+.launcher-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.launcher-logo {
+  font-size: 14px;
+  letter-spacing: 0.5em;
+  color: var(--cyan);
+  margin-bottom: 24px;
+  text-shadow: 0 0 20px rgba(40, 243, 255, 0.6);
+  opacity: 0;
+  animation: fadeInDown 1.2s ease-out 0.3s forwards;
+}
+
+.launcher-prompt {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  animation: prompt-blink 2s ease-in-out infinite;
+}
+
+@keyframes prompt-blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 /* Tutorial overlay */
 .tut {
   position: fixed;
